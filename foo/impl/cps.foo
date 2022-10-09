@@ -3863,6 +3863,23 @@ $entry:2($return:3, $receiver::A class:4):
     $return:3(#<Instance A>)
 "!
 
+    method test_convert_method_arg
+        let ns = Namespace standard.
+        let def = self convertClass: "
+class ArgTest \{}
+    method asd: x
+       x!
+end
+"
+                      with: []
+                      in: ns.
+        let cps = (def findMethod: (ns intern: "asd:")) cps.
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3, $receiver::ArgTest:4, x:5):
+    $return:3(x:5)
+"!
+
 
     method test_convert_global
         let cps = self convertExpr: "X".
