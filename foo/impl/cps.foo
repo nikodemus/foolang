@@ -3170,6 +3170,18 @@ class CpsGraphCBackend { backend graph }
         Error raise: "UNIMPLEMENTED: {aCont}"!
 
     method emitApplication: anApp with: args
+        -- SIMPLEST THING THAT COULD POSSIBLY WORK
+        --
+        -- 0. Add bp to runtime convention.
+        -- 1. On #emit, walk over the CPS, collecting
+        --    all variables from defs.
+        -- 2. Reserve space on stack for each. (2 words, always)
+        -- 3. Keep a variable -> stackslot map
+        -- 4. emit PUSH_DATUM(sp, READ_DATUM(bp, {stackslot}))
+        --
+        -- Later improvements:
+        -- * Don't reserve space for class when statically known.
+        -- * Live ranges to use less space.
         let targetInfo = backend declare: anApp target.
         backend output
             println: "    PUSH_DATUM(sp, {targetInfo name});".
