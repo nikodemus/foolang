@@ -3480,23 +3480,42 @@ $bind:13($value:6):
                equals: "
 // #<CpsGraph Test#test>
 char* foo_method_function_1(char* sp, struct Actor* actor) \{
-    actor->bp = sp;
+    // 0 - return-continuation
+    // 1 - self class
+    // 2 - self datum
+    // 3 - layout
+    // -
+    // 4 - value class
+    // 5 - value datum
+    char* bp = actor->bp = sp - 3 * sizeof(datum_t);
     PUSH_DATUM(sp, foo_continuation_2);
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -3));
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -2));
-    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 1));
+    PUSH_DATUM(sp, READ_DATUM(bp, 1));
+    PUSH_DATUM(sp, READ_DATUM(bp, 2));
+    PUSH_DATUM(sp, IMMS(1) | OBJS(1));
     PUSH_DATUM(sp, foo_builtin_3); // Test#opaqueIdentity
     return sp;
 }
 
 // #<Continuation $bind:13>
 char* foo_continuation_2(char* sp, struct Actor* actor) \{
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -4));
+    // -3 - arg class
+    // -2 - arg datum
+    // -1 - layout
+    char* bp = actor->bp;
+    // FIXME: It would be really nice to avoid this copy to
+    // reserved stack-slot, but for now it keeps things nice
+    // and simple. (...and makes debugging easier as well.)
+    MOVE_DATUM(bp, 4, sp, -3); // value class
+    MOVE_DATUM(bp, 5, sp, -2); // value datum
+    datum_t r4 = READ_DATUM(bp, 4);
+    datum_t r5 = READ_DATUM(bp, 5);
+    datum_t r0 = POP_FRAME(sp, bp);
+    PUSH_DATUM(sp, r0);
     PUSH_DATUM(sp, &foo_class_5);
     PUSH_DATUM(sp, &foo_class_6);
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, 1));
-    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 2));
+    PUSH_DATUM(sp, r4);
+    PUSH_DATUM(sp, r5);
+    PUSH_DATUM(sp, IMMS(1) | OBJS(2));
     PUSH_DATUM(sp, foo_builtin_4); // Test class#typecheck:
     return sp;
 \}
@@ -3525,12 +3544,21 @@ $entry:2($return:3, $receiver::AddiTest:4, x::Integer:7):
                equals: "
 // #<CpsGraph AddiTest#double:>
 char* foo_method_function_1(char* sp, struct Actor* actor) \{
-    if (READ_DATUM(sp, -3) != &foo_class_2) // x :: Integer
+    // 0 - return-continuation
+    // 1 - self class
+    // 2 - self datum
+    // 3 - x class
+    // 4 - x datum
+    // 5 - layout
+    char* bp = actor->bp = sp - 5 * sizeof(datum_t);
+    if (READ_DATUM(bp, 3) != &foo_class_2) // x :: Integer
         return runtime_type_error(sp, actor);
-    actor->bp = sp;
-    PUSH_DATUM(sp, foo_class_2);
-    PUSH_DATUM(sp, ((int64_t)READ_DATUM(actor->bp, -2) + (int64_t)READ_DATUM(actor->bp, -2)));
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -6));
+    datum_t r4 = READ_DATUM(sp, 4);
+    datum_t r0 = POP_FRAME(sp, bp);
+    PUSH_DATUM(sp, &foo_class_2);
+    PUSH_DATUM(sp, ((int64_t)r4 + (int64_t)r4));
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, r0);
     return sp;
 }
 "!
