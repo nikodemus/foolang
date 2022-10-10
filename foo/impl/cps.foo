@@ -1337,6 +1337,10 @@ class Variable { id::Integer
             ifFalse: { "{name}::{type name}:{id}" }!
 
 
+    method toString
+        "#<Variable {self printName}>"!
+
+
     method visitBy: visitor
         visitor visitVariable: self!
 
@@ -2156,7 +2160,7 @@ class CpsGraph { entry::Continuation
 
     method variables
         let vars = Set new.
-        self doNodes: { |each| vars addAll: each params }.
+        continuations do: { |each| vars addAll: each params }.
         vars!
 
 
@@ -3254,38 +3258,82 @@ class CpsGraphCBackend { backend graph stackmap }
     method generateStackmap
         (stackmap is False) assert: "Stackmap exists already!".
         let map = Dictionary new.
-        map put: { address: -3 }
-            at: graph exit.
-        map put: { varClass: -2, varDatum: -1 }
-            at: graph receiver.
-        let nextFree = 0.
+        let params = graph entry params.
+        -- Stack has:
+        --
+        --    exit
+        --    receiver-class
+        --    receiver-datum
+        --    arg1-class
+        --    arg2-datum
+        --    ...
+        --    argInfo
+        --
+        let next = params size * -2.
+        map put: { address: next }
+            at: params first.
+        next = next + 1.
+        params rest
+            do: { |each|
+                  map put: { varClass: next, varDatum: next + 1 }
+                      at: each.
+                  next = next + 2 }.
+        -- Next slot has arity, check and skip.
+        (next is -1) assert.
+        next = 0.
         graph variables
             doSorted: { |each|
                         (map has: each)
-                            ifFalse: { map put: { varClass: nextFree, varDatum: nextFree + 1 }
+                            ifFalse: { map put: { varClass: next, varDatum: next + 1 }
                                            at: each.
-                                       nextFree = nextFree + 2 } }.
+                                       next = next + 2 } }.
         stackmap = map!
 
 
     method emitPrelude
-        backend output println: "    actor->bp = sp;"!
+        (graph entry params rest rest)
+            do: { |each|
+                  each type
+                      => { self emitParameterTypecheck: each } }.
+        backend output print: "    actor->bp = sp;\n"!
+
+
+    method emitParameterTypecheck: aVar
+        let actualClass = (stackmap at: aVar) varClass.
+        let expectedClass = (backend declare: aVar type) name.
+        backend output
+            ; print: "    if (READ_DATUM(sp, {actualClass}) != &{expectedClass}) // "
+            ; print: aVar name
+            ; print: " :: "
+            ; print: aVar type name
+            ; print: "\n        return runtime_type_error(sp, actor);\n"!
 
 
     method emitBody: aCont
         (Application includes: aCont target)
             => { return self emitApplication: aCont target
                              with: aCont args }.
-        Error raise: "UNIMPLEMENTED emitBody: {aCont}"!
+        (Variable includes: aCont target)
+            => { return self emitCall: aCont target
+                             with: aCont args }.
+        Error raise: "UNIMPLEMENTED emitBody: {aCont target}"!
 
 
     method locateTarget: target
         (Continuation includes: target)
             => { return (backend declare: target) name }.
         (Variable includes: target)
-            => { return "READ_DATUM(sp, {(stackmap at: target) address})" }.
+            => { return "READ_DATUM(actor->bp, {(stackmap at: target) address})" }.
         Error raise: "UNIMPLEMENTED locateTarget: {target}"!
             -- backend declare:
+
+
+    method emitCall: aCont with: args
+        let targetAddr = self locateTarget: aCont.
+        args do: { |each| self emitArgument: each }.
+        backend output
+            ; print: "    PUSH_DATUM(sp, {targetAddr});\n"
+            ; print: "    return sp;\n"!
 
 
     method emitApplication: anApp with: args
@@ -3305,18 +3353,41 @@ class CpsGraphCBackend { backend graph stackmap }
         (Variable includes: arg)
             => { let slotOf = stackmap at: arg.
                  backend output
-                     ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varClass}));"
-                     ; println: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varDatum}));".
+                     ; print: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varClass}));\n"
+                     ; print: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varDatum}));\n".
                  return arg }.
         (Global includes: arg)
             => { let definition = arg definition :: ClassDefinition.
                  let classInfo = backend declare: definition.
                  let ownClassInfo = backend declare: definition ownClassDefinition.
                  backend output
-                     ; println: "    PUSH_DATUM(sp, &{classInfo name});"
-                     ; println: "    PUSH_DATUM(sp, &{ownClassInfo name});".
+                     ; print: "    PUSH_DATUM(sp, &{classInfo name});\n"
+                     ; print: "    PUSH_DATUM(sp, &{ownClassInfo name});\n".
                  return arg }.
+        (Operation includes: arg)
+            => { (arg kind is MAKE_INSTANCE)
+                     => { let argClass = self emitDatum: arg args first.
+                          let argDatum = self emitDatum: arg args second.
+                         backend output
+                              ; print: "    PUSH_DATUM(sp, {argClass});\n"
+                              ; print: "    PUSH_DATUM(sp, {argDatum});\n".
+                          return arg } }.
         Error raise: "UNIMPLEMENTED emitArgument: {arg}"!
+
+
+    method emitDatum: arg
+        (Constant includes: arg)
+            => { return (backend declare: arg value) name }.
+        (Operation includes: arg)
+            => { (arg kind is ADDI)
+                     => { let left = self emitDatum: arg args first.
+                          let right = self emitDatum: arg args second.
+                          return "((int64_t){left} + (int64_t){right})"}.
+                 (arg kind is DATUM_OF)
+                     => { let expr = arg args first.
+                          (Variable includes: expr)
+                              => { return "READ_DATUM(actor->bp, {(stackmap at: expr) varDatum})" } } }.
+        Error raise: "UNIMPLEMENTED emitDatum: {arg}"!
 
 
     method visitContinuation: aCont
@@ -3411,8 +3482,8 @@ $bind:13($value:6):
 char* foo_method_function_1(char* sp, struct Actor* actor) \{
     actor->bp = sp;
     PUSH_DATUM(sp, foo_continuation_2);
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -3));
     PUSH_DATUM(sp, READ_DATUM(actor->bp, -2));
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -1));
     PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 1));
     PUSH_DATUM(sp, foo_builtin_3); // Test#opaqueIdentity
     return sp;
@@ -3420,7 +3491,7 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
 
 // #<Continuation $bind:13>
 char* foo_continuation_2(char* sp, struct Actor* actor) \{
-    PUSH_DATUM(sp, READ_DATUM(sp, -3));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -4));
     PUSH_DATUM(sp, &foo_class_5);
     PUSH_DATUM(sp, &foo_class_6);
     PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
@@ -3429,6 +3500,39 @@ char* foo_continuation_2(char* sp, struct Actor* actor) \{
     PUSH_DATUM(sp, foo_builtin_4); // Test class#typecheck:
     return sp;
 \}
+"!
+
+
+    method test_c_backend_integer_addition
+        let ns = Namespace standard.
+        let def = self convertClass: "class AddiTest \{}
+                                          method double: x::Integer
+                                              x + x!
+                                      end"
+                      with: [IntegerClassDefinition]
+                      in: ns.
+        -- Sanity check the CPS first
+        let m = def findMethod: (ns intern: "double:").
+        assert that: { CpsPrinter printToString: m cps }
+               equals: "
+$entry:2($return:3, $receiver::AddiTest:4, x::Integer:7):
+    $return:3(makeInstance:26(Integer, addi:25(datumOf:24(x::Integer:7), datumOf:24(x::Integer:7))))
+".
+
+               let backend = CBackend output: StringOutput new.
+        backend emitFunction: m impl.
+        assert that: { backend output content }
+               equals: "
+// #<CpsGraph AddiTest#double:>
+char* foo_method_function_1(char* sp, struct Actor* actor) \{
+    if (READ_DATUM(sp, -3) != &foo_class_2) // x :: Integer
+        return runtime_type_error(sp, actor);
+    actor->bp = sp;
+    PUSH_DATUM(sp, foo_class_2);
+    PUSH_DATUM(sp, ((int64_t)READ_DATUM(actor->bp, -2) + (int64_t)READ_DATUM(actor->bp, -2)));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -6));
+    return sp;
+}
 "!
 
 
@@ -3498,8 +3602,8 @@ struct FooSelector foo_selector_8 = \{
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
     actor->bp = sp;
     PUSH_DATUM(sp, foo_continuation_11);
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -3));
     PUSH_DATUM(sp, READ_DATUM(actor->bp, -2));
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -1));
     PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 1));
     PUSH_DATUM(sp, foo_builtin_6); // Test#opaqueIdentity
     return sp;
@@ -3507,7 +3611,7 @@ char* foo_method_function_10(char* sp, struct Actor* actor) \{
 
 // #<Continuation $bind:13>
 char* foo_continuation_11(char* sp, struct Actor* actor) \{
-    PUSH_DATUM(sp, READ_DATUM(sp, -3));
+    PUSH_DATUM(sp, READ_DATUM(actor->bp, -4));
     PUSH_DATUM(sp, &foo_class_1);
     PUSH_DATUM(sp, &foo_class_13);
     PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
