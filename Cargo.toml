@@ -19,7 +19,6 @@ path = "src/main.rs"
 opt-level = 2
 
 [dependencies]
-regex = "1.*.*"
 clap = "2.*.*"
 getrandom = "0.1.*"
 rand = "0.7.*"

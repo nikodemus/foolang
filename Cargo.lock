@@ -143,7 +143,6 @@ dependencies = [
  "predicates 1.0.8",
  "pretty_assertions",
  "rand",
- "regex",
  "serde_json",
  "winapi",
 ]
