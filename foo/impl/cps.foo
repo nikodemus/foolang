@@ -3328,6 +3328,20 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
 
     method emitBody: aCont
+        aCont is graph entry
+            ifFalse: { backend output print: "    char* bp = actor->bp;\n".
+                       -- FIXME: It would be really nice to avoid this copy to
+                       -- reserved stack-slot, but for now it keeps things nice
+                       -- and simple. (...and makes debugging easier as well.)
+                       let params = aCont params.
+                       let next = -(params size * 2 + 1).
+                       aCont params
+                           do: { |each|
+                                 let slotOf = stackmap at: each.
+                                 backend output
+                                     ; print: "    WRITE_DATUM(bp, {slotOf varClass}, READ_DATUM(sp, {next}));\n"
+                                     ; print: "    WRITE_DATUM(bp, {slotOf varDatum}, READ_DATUM(sp, {next+1}));\n".
+                                 next = next + 2 } }.
         (Application includes: aCont target)
             => { return self emitApplication: aCont target
                              with: aCont args }.
@@ -3407,12 +3421,6 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
                               => { return "READ_DATUM(bp, {(stackmap at: expr) varDatum})" } } }.
         Error raise: "UNIMPLEMENTED emitDatum: {arg}"!
 
-
-    method visitContinuation: aCont
-        backend emitFunctionHeader: graph.
-        self emitPrelude.
-        self emitBody: graph entry.
-        backend emitFunctionFooter!
 end
 
 
@@ -3521,11 +3529,8 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
 // #<Continuation $bind:13>
 char* foo_continuation_2(char* sp, struct Actor* actor) \{
     char* bp = actor->bp;
-    // FIXME: It would be really nice to avoid this copy to
-    // reserved stack-slot, but for now it keeps things nice
-    // and simple. (...and makes debugging easier as well.)
-    MOVE_DATUM(bp, 4, sp, -3); // value class
-    MOVE_DATUM(bp, 5, sp, -2); // value datum
+    WRITE_DATUM(bp, 4, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 5, READ_DATUM(sp, -2));
     datum_t r4 = READ_DATUM(bp, 4);
     datum_t r5 = READ_DATUM(bp, 5);
     datum_t r0 = POP_FRAME(sp, bp);
