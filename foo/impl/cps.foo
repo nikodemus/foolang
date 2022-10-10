@@ -3234,17 +3234,19 @@ class CBackend { output declared emitted }
 end
 
 
-class CpsGraphCBackend { backend graph stackmap }
+class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
     direct method backend: backend graph: graph
         self backend: backend
              graph: graph
-             stackmap: False!
+             stackmap: False
+             paramSize: 0
+             frameSize: 0!
 
 
     method emit
-        self generateStackmap.
         backend emitFunctionHeader: graph.
+        self generateStackmap.
         self emitPrelude.
         self emitBody: graph entry.
         backend emitFunctionFooter.
@@ -3269,24 +3271,36 @@ class CpsGraphCBackend { backend graph stackmap }
         --    ...
         --    argInfo
         --
-        let next = params size * -2.
-        map put: { address: next }
+        backend output print: "    // 0 - {graph exit name}\n".
+        let next = 0.
+        map put: { varDatum: next }
             at: params first.
         next = next + 1.
         params rest
             do: { |each|
+                  backend output
+                      ; print: "    // {next} - {each name} class\n"
+                      ; print: "    // {next+1} - {each name} datum\n".
                   map put: { varClass: next, varDatum: next + 1 }
                       at: each.
                   next = next + 2 }.
-        -- Next slot has arity, check and skip.
-        (next is -1) assert.
-        next = 0.
+        backend output
+            ; print: "    // {next} - layout word\n    // -\n".
+        next = next + 1.
+        paramSize = next.
         graph variables
             doSorted: { |each|
                         (map has: each)
-                            ifFalse: { map put: { varClass: next, varDatum: next + 1 }
-                                           at: each.
-                                       next = next + 2 } }.
+                            ifFalse: {
+                                backend output
+                                    ; print: "    // {next} - {each name} class\n"
+                                    ; print: "    // {next+1} - {each name} datum\n".
+                                map put: { varClass: next, varDatum: next + 1 }
+                                    at: each.
+                                frameSize = frameSize + 2.
+                                next = next + 2 } }.
+        frameSize > 0
+            ifTrue: { backend output print: "    // {next} - layout word\n" }.
         stackmap = map!
 
 
@@ -3295,7 +3309,11 @@ class CpsGraphCBackend { backend graph stackmap }
             do: { |each|
                   each type
                       => { self emitParameterTypecheck: each } }.
-        backend output print: "    actor->bp = sp;\n"!
+        backend output
+            ; print: "    char* bp = actor->bp = sp - {paramSize} * sizeof(datum_t);\n".
+        frameSize > 0
+            ifTrue: { frameSize times: { backend output print: "    PUSH_DATUM(sp, 0);\n" }.
+                      backend output print: "    PUSH_DATUM(sp, OBJS({frameSize / 2}));\n" }!
 
 
     method emitParameterTypecheck: aVar
@@ -3323,7 +3341,7 @@ class CpsGraphCBackend { backend graph stackmap }
         (Continuation includes: target)
             => { return (backend declare: target) name }.
         (Variable includes: target)
-            => { return "READ_DATUM(actor->bp, {(stackmap at: target) address})" }.
+            => { return "READ_DATUM(bp, {(stackmap at: target) varDatum})" }.
         Error raise: "UNIMPLEMENTED locateTarget: {target}"!
             -- backend declare:
 
@@ -3344,7 +3362,7 @@ class CpsGraphCBackend { backend graph stackmap }
             ; print: "    PUSH_DATUM(sp, {targetAddr});\n".
         args do: { |each| self emitArgument: each }.
         backend output
-            ; print: "    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, {args size}));\n"
+            ; print: "    PUSH_DATUM(sp, IMMS(1) | OBJS({args size}));\n"
             ; print: "    PUSH_DATUM(sp, {functionInfo name}); // {function printName}\n"
             ; print: "    return sp;\n"!
 
@@ -3353,8 +3371,8 @@ class CpsGraphCBackend { backend graph stackmap }
         (Variable includes: arg)
             => { let slotOf = stackmap at: arg.
                  backend output
-                     ; print: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varClass}));\n"
-                     ; print: "    PUSH_DATUM(sp, READ_DATUM(actor->bp, {slotOf varDatum}));\n".
+                     ; print: "    PUSH_DATUM(sp, READ_DATUM(bp, {slotOf varClass}));\n"
+                     ; print: "    PUSH_DATUM(sp, READ_DATUM(bp, {slotOf varDatum}));\n".
                  return arg }.
         (Global includes: arg)
             => { let definition = arg definition :: ClassDefinition.
@@ -3386,7 +3404,7 @@ class CpsGraphCBackend { backend graph stackmap }
                  (arg kind is DATUM_OF)
                      => { let expr = arg args first.
                           (Variable includes: expr)
-                              => { return "READ_DATUM(actor->bp, {(stackmap at: expr) varDatum})" } } }.
+                              => { return "READ_DATUM(bp, {(stackmap at: expr) varDatum})" } } }.
         Error raise: "UNIMPLEMENTED emitDatum: {arg}"!
 
 
@@ -3480,14 +3498,18 @@ $bind:13($value:6):
                equals: "
 // #<CpsGraph Test#test>
 char* foo_method_function_1(char* sp, struct Actor* actor) \{
-    // 0 - return-continuation
-    // 1 - self class
-    // 2 - self datum
-    // 3 - layout
+    // 0 - $return
+    // 1 - $receiver class
+    // 2 - $receiver datum
+    // 3 - layout word
     // -
-    // 4 - value class
-    // 5 - value datum
-    char* bp = actor->bp = sp - 3 * sizeof(datum_t);
+    // 4 - $value class
+    // 5 - $value datum
+    // 6 - layout word
+    char* bp = actor->bp = sp - 4 * sizeof(datum_t);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(1));
     PUSH_DATUM(sp, foo_continuation_2);
     PUSH_DATUM(sp, READ_DATUM(bp, 1));
     PUSH_DATUM(sp, READ_DATUM(bp, 2));
@@ -3498,9 +3520,6 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
 
 // #<Continuation $bind:13>
 char* foo_continuation_2(char* sp, struct Actor* actor) \{
-    // -3 - arg class
-    // -2 - arg datum
-    // -1 - layout
     char* bp = actor->bp;
     // FIXME: It would be really nice to avoid this copy to
     // reserved stack-slot, but for now it keeps things nice
@@ -3632,7 +3651,7 @@ char* foo_method_function_10(char* sp, struct Actor* actor) \{
     PUSH_DATUM(sp, foo_continuation_11);
     PUSH_DATUM(sp, READ_DATUM(actor->bp, -3));
     PUSH_DATUM(sp, READ_DATUM(actor->bp, -2));
-    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 1));
+    PUSH_DATUM(sp, IMMS(1) | OBJS(1));
     PUSH_DATUM(sp, foo_builtin_6); // Test#opaqueIdentity
     return sp;
 }
@@ -3644,7 +3663,7 @@ char* foo_continuation_11(char* sp, struct Actor* actor) \{
     PUSH_DATUM(sp, &foo_class_13);
     PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
     PUSH_DATUM(sp, READ_DATUM(actor->bp, 1));
-    PUSH_DATUM(sp, ARG_IMMS_AND_OBJS(1, 2));
+    PUSH_DATUM(sp, IMMS(1) | OBJS(12));
     PUSH_DATUM(sp, foo_builtin_12); // Test class#typecheck:
     return sp;
 \}
