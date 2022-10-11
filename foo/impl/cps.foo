@@ -1452,6 +1452,9 @@ class DATUM_OF {}
                      => { let datum = arg args second.
                           return op replaceUsesWith: datum in: worklist } }.
         self simplifyIfConstant: op in: graph with: worklist!
+
+    direct method visit: operation by: visitor
+        visitor visitDatumOf: operation!
 end
 
 
@@ -3234,6 +3237,140 @@ class CBackend { output declared emitted }
 end
 
 
+class ForAllVariables { variables }
+    direct method in: expressions doSorted: block
+        let collector = self variables: Set new.
+        expressions
+            do: { |each| collector collectFrom: each }.
+        collector variables
+            doSorted: block!
+
+    method collectFrom: anExpr
+        anExpr visitBy: self!
+
+    method visitVariable: aVar
+        variables add: aVar!
+
+    method visitOperation: anOp
+        anOp args do: { |each| each visitBy: self }!
+
+    method visitConstant: _
+        False!
+
+    method visitGlobal: _
+        False!
+
+    method visitContinuation: _
+        False!
+
+    method visitMethodDefinition: _
+        False!
+end
+
+
+class CArgument { backend stackmap }
+    direct method emit: expr
+                  withBackend: backend
+                  withStackmap: stackmap
+        let argumentEmitter = self backend: backend stackmap: stackmap.
+        expr visitBy: argumentEmitter!
+
+
+    method visitVariable: aVar
+        let info = stackmap at: aVar.
+        info classSlot
+            => { backend output
+                     print: "    PUSH_DATUM(sp, {info classTemp});\n" }.
+        info datumTemp
+            => { |tmp|
+                 return backend output
+                     print: "    PUSH_DATUM(sp, {tmp});\n" }.
+        Error raise: "No tmp: {aVar}, info: {info}"!
+
+
+    method visitGlobal: aGlobal
+        let definition = aGlobal definition :: ClassDefinition.
+        let classInfo = backend declare: definition.
+        let ownClassInfo = backend declare: definition ownClassDefinition.
+        backend output
+            ; print: "    PUSH_DATUM(sp, &{classInfo name});\n"
+            ; print: "    PUSH_DATUM(sp, &{ownClassInfo name});\n"!
+
+
+    method visitContinuation: aCont
+        backend output
+            ; print: "    PUSH_DATUM(sp, {(backend declare: aCont) name :: String});\n"!
+
+
+    method visitOperation: anOp
+        anOp kind visit: anOp by: self!
+
+
+    method visitMakeInstance: aMakeInstance
+        aMakeInstance args
+            do: { |each|
+                  let expr = CExpr emit: each
+                                   withBackend: backend
+                                   withStackmap: stackmap.
+                  backend output
+                      print: "    PUSH_DATUM(sp, {expr});\n" }!
+end
+
+
+class CExpr { backend stackmap }
+    direct method emit: expr
+                  withBackend: backend
+                  withStackmap: stackmap -> String
+        let exprBuilder = self backend: backend stackmap: stackmap.
+        expr visitBy: exprBuilder!
+
+    method visitConstant: aConst
+        "&{(backend declare: aConst value) name}"!
+
+    method visitOperation: anOp -> String
+        anOp kind visit: anOp by: self!
+
+    method visitDatumOf: aDatumOf
+        let var = aDatumOf args first :: Variable.
+        (stackmap at: var)
+            => { |info| return info datumTemp }.
+        Error raise: "No info for datum: {var}"!
+
+    method visitAddi: anAddi
+        let left = anAddi args first visitBy: self.
+        let right = anAddi args second visitBy: self.
+        "((int64_t){left} + (int64_t){right})"!
+end
+
+
+class CVarInfo { classSlot datumSlot classTemp datumTemp }
+    is Object
+
+    direct method classSlot: classSlot datumSlot: datumSlot
+        self classSlot: classSlot
+             datumSlot: datumSlot
+             classTemp: False
+             datumTemp: False!
+
+    direct method datumSlot: datumSlot
+        self classSlot: False
+             datumSlot: datumSlot
+             classTemp: False
+             datumTemp: False!
+
+    method datumTemp: new::String
+        datumTemp = new!
+
+    method classTemp: new::String
+        classTemp = new!
+
+    method toString
+        classSlot
+            => { return "#<CVarInfo {datumSlot}::{classSlot}, {datumTemp}::{classTemp}>" }.
+        "<CVarInfo {datumSlot}, {datumTemp}>"!
+end
+
+
 class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
     direct method backend: backend graph: graph
@@ -3273,7 +3410,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
         --
         backend output print: "    // 0 - {graph exit name}\n".
         let next = 0.
-        map put: { varDatum: next }
+        map put: (CVarInfo datumSlot: next)
             at: params first.
         next = next + 1.
         params rest
@@ -3281,7 +3418,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
                   backend output
                       ; print: "    // {next} - {each name} class\n"
                       ; print: "    // {next+1} - {each name} datum\n".
-                  map put: { varClass: next, varDatum: next + 1 }
+                  map put: (CVarInfo classSlot: next datumSlot: next + 1)
                       at: each.
                   next = next + 2 }.
         backend output
@@ -3295,7 +3432,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
                                 backend output
                                     ; print: "    // {next} - {each name} class\n"
                                     ; print: "    // {next+1} - {each name} datum\n".
-                                map put: { varClass: next, varDatum: next + 1 }
+                                map put: (CVarInfo classSlot: next datumSlot: next + 1)
                                     at: each.
                                 frameSize = frameSize + 2.
                                 next = next + 2 } }.
@@ -3305,22 +3442,22 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
 
     method emitPrelude
+        backend output
+            ; print: "    char* bp = actor->bp = sp - {paramSize} * sizeof(datum_t);\n".
         (graph entry params rest rest)
             do: { |each|
                   each type
                       => { self emitParameterTypecheck: each } }.
-        backend output
-            ; print: "    char* bp = actor->bp = sp - {paramSize} * sizeof(datum_t);\n".
         frameSize > 0
             ifTrue: { frameSize times: { backend output print: "    PUSH_DATUM(sp, 0);\n" }.
                       backend output print: "    PUSH_DATUM(sp, OBJS({frameSize / 2}));\n" }!
 
 
     method emitParameterTypecheck: aVar
-        let actualClass = (stackmap at: aVar) varClass.
+        let actualClass = (stackmap at: aVar) classSlot.
         let expectedClass = (backend declare: aVar type) name.
         backend output
-            ; print: "    if (READ_DATUM(sp, {actualClass}) != &{expectedClass}) // "
+            ; print: "    if (READ_DATUM(bp, {actualClass}) != &{expectedClass}) // "
             ; print: aVar name
             ; print: " :: "
             ; print: aVar type name
@@ -3337,10 +3474,13 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
                        let next = -(params size * 2 + 1).
                        aCont params
                            do: { |each|
-                                 let slotOf = stackmap at: each.
+                                 let info = stackmap at: each.
+                                 info classSlot
+                                     => { |slot|
+                                          backend output
+                                              print: "    WRITE_DATUM(bp, {slot}, READ_DATUM(sp, {next}));\n" }.
                                  backend output
-                                     ; print: "    WRITE_DATUM(bp, {slotOf varClass}, READ_DATUM(sp, {next}));\n"
-                                     ; print: "    WRITE_DATUM(bp, {slotOf varDatum}, READ_DATUM(sp, {next+1}));\n".
+                                     print: "    WRITE_DATUM(bp, {info datumSlot}, READ_DATUM(sp, {next+1}));\n".
                                  next = next + 2 } }.
         (Application includes: aCont target)
             => { return self emitApplication: aCont target
@@ -3351,74 +3491,89 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
         Error raise: "UNIMPLEMENTED emitBody: {aCont target}"!
 
 
-    method locateTarget: target
-        (Continuation includes: target)
-            => { return (backend declare: target) name }.
-        (Variable includes: target)
-            => { return "READ_DATUM(bp, {(stackmap at: target) varDatum})" }.
-        Error raise: "UNIMPLEMENTED locateTarget: {target}"!
-            -- backend declare:
-
-
     method emitCall: aCont with: args
-        let targetAddr = self locateTarget: aCont.
-        args do: { |each| self emitArgument: each }.
+        ForAllVariables
+            in: (args append: [aCont])
+            doSorted: { |each| self emitCopyVariable: each }.
+        -- Iff graph exit, then this is a tail call: pop frame by setting sp = bp.
+        aCont is graph exit
+            ifTrue: { backend output print: "    sp = bp;\n" }.
+        args do: { |each|
+                   CArgument
+                       emit: each
+                       withBackend: backend
+                       withStackmap: stackmap }.
         backend output
-            ; print: "    PUSH_DATUM(sp, {targetAddr});\n"
-            ; print: "    return sp;\n"!
+            print: "    PUSH_DATUM(sp, OBJS({args size}));\n".
+        CArgument
+            emit: aCont
+            withBackend: backend
+            withStackmap: stackmap.
+        backend output
+            print: "    return sp;\n"!
+
+
+    method collectVarsFrom: expr to: set
+        (Variable includes: expr)
+            => { return set add: expr }.
+        (Global includes: expr)
+            => { return False }.
+        Error raise: "UNIMPLEMENTED collectVarsFrom:to: {expr}"!
+
+
+    method emitCopyVariable: var
+        let info = stackmap at: var.
+        info datumTemp: "d{info datumSlot}".
+        info classSlot
+            => { |slot|
+                 let tmp = "c{slot}".
+                 info classTemp: tmp.
+                 backend output
+                     print: "    datum_t {tmp} = READ_DATUM(bp, {slot});\n" }.
+        backend output
+            print: "    datum_t {info datumTemp} = READ_DATUM(bp, {info datumSlot});\n"!
 
 
     method emitApplication: anApp with: args
-        let targetAddr = self locateTarget: anApp target.
+        -- Where the application will return.
+        let target = anApp target.
+        -- Function we're applying.
+        let function = (anApp function :: Constant) value.
+        -- 1. Collect variables from all argument expressions.
+        -- 2. Copy each variable to a temporary datum_t.
+        ForAllVariables
+            in: (args append: [target, function])
+            doSorted: { |each| self emitCopyVariable: each }.
+        -- 3. Iff target is graph exit, then this is a tail-application: pop frame by setting sp = bp.
+        anApp target is graph exit
+            ifTrue: { backend output print: "    sp = bp;\n" }.
+        -- 4. Push application args: target addr, copies of arguments, layout, and
+        -- function addr.
         let function = (anApp function :: Constant) value.
         let functionInfo = backend declare: function impl.
-        backend output
-            ; print: "    PUSH_DATUM(sp, {targetAddr});\n".
-        args do: { |each| self emitArgument: each }.
+        CArgument
+            emit: anApp target
+            withBackend: backend
+            withStackmap: stackmap.
+        args
+            do: { |each|
+                  CArgument
+                      emit: each
+                      withBackend: backend
+                      withStackmap: stackmap }.
         backend output
             ; print: "    PUSH_DATUM(sp, IMMS(1) | OBJS({args size}));\n"
             ; print: "    PUSH_DATUM(sp, {functionInfo name}); // {function printName}\n"
             ; print: "    return sp;\n"!
 
 
-    method emitArgument: arg
-        (Variable includes: arg)
-            => { let slotOf = stackmap at: arg.
-                 backend output
-                     ; print: "    PUSH_DATUM(sp, READ_DATUM(bp, {slotOf varClass}));\n"
-                     ; print: "    PUSH_DATUM(sp, READ_DATUM(bp, {slotOf varDatum}));\n".
-                 return arg }.
-        (Global includes: arg)
-            => { let definition = arg definition :: ClassDefinition.
-                 let classInfo = backend declare: definition.
-                 let ownClassInfo = backend declare: definition ownClassDefinition.
-                 backend output
-                     ; print: "    PUSH_DATUM(sp, &{classInfo name});\n"
-                     ; print: "    PUSH_DATUM(sp, &{ownClassInfo name});\n".
-                 return arg }.
-        (Operation includes: arg)
-            => { (arg kind is MAKE_INSTANCE)
-                     => { let argClass = self emitDatum: arg args first.
-                          let argDatum = self emitDatum: arg args second.
-                         backend output
-                              ; print: "    PUSH_DATUM(sp, {argClass});\n"
-                              ; print: "    PUSH_DATUM(sp, {argDatum});\n".
-                          return arg } }.
-        Error raise: "UNIMPLEMENTED emitArgument: {arg}"!
-
-
     method emitDatum: arg
-        (Constant includes: arg)
-            => { return (backend declare: arg value) name }.
         (Operation includes: arg)
-            => { (arg kind is ADDI)
-                     => { let left = self emitDatum: arg args first.
-                          let right = self emitDatum: arg args second.
-                          return "((int64_t){left} + (int64_t){right})"}.
+            => {
                  (arg kind is DATUM_OF)
                      => { let expr = arg args first.
                           (Variable includes: expr)
-                              => { return "READ_DATUM(bp, {(stackmap at: expr) varDatum})" } } }.
+                              => { return "READ_DATUM(bp, {(stackmap at: expr) datumSlot})" } } }.
         Error raise: "UNIMPLEMENTED emitDatum: {arg}"!
 
 end
@@ -3518,27 +3673,30 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
     PUSH_DATUM(sp, 0);
     PUSH_DATUM(sp, 0);
     PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, foo_continuation_2);
-    PUSH_DATUM(sp, READ_DATUM(bp, 1));
-    PUSH_DATUM(sp, READ_DATUM(bp, 2));
+    datum_t c1 = READ_DATUM(bp, 1);
+    datum_t d2 = READ_DATUM(bp, 2);
+    PUSH_DATUM(sp, foo_continuation_3);
+    PUSH_DATUM(sp, c1);
+    PUSH_DATUM(sp, d2);
     PUSH_DATUM(sp, IMMS(1) | OBJS(1));
-    PUSH_DATUM(sp, foo_builtin_3); // Test#opaqueIdentity
+    PUSH_DATUM(sp, foo_builtin_2); // Test#opaqueIdentity
     return sp;
 }
 
 // #<Continuation $bind:13>
-char* foo_continuation_2(char* sp, struct Actor* actor) \{
+char* foo_continuation_3(char* sp, struct Actor* actor) \{
     char* bp = actor->bp;
     WRITE_DATUM(bp, 4, READ_DATUM(sp, -3));
     WRITE_DATUM(bp, 5, READ_DATUM(sp, -2));
-    datum_t r4 = READ_DATUM(bp, 4);
-    datum_t r5 = READ_DATUM(bp, 5);
-    datum_t r0 = POP_FRAME(sp, bp);
-    PUSH_DATUM(sp, r0);
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c4 = READ_DATUM(bp, 4);
+    datum_t d5 = READ_DATUM(bp, 5);
+    sp = bp;
+    PUSH_DATUM(sp, d0);
     PUSH_DATUM(sp, &foo_class_5);
     PUSH_DATUM(sp, &foo_class_6);
-    PUSH_DATUM(sp, r4);
-    PUSH_DATUM(sp, r5);
+    PUSH_DATUM(sp, c4);
+    PUSH_DATUM(sp, d5);
     PUSH_DATUM(sp, IMMS(1) | OBJS(2));
     PUSH_DATUM(sp, foo_builtin_4); // Test class#typecheck:
     return sp;
@@ -3568,21 +3726,24 @@ $entry:2($return:3, $receiver::AddiTest:4, x::Integer:7):
                equals: "
 // #<CpsGraph AddiTest#double:>
 char* foo_method_function_1(char* sp, struct Actor* actor) \{
-    // 0 - return-continuation
-    // 1 - self class
-    // 2 - self datum
+    // 0 - $return
+    // 1 - $receiver class
+    // 2 - $receiver datum
     // 3 - x class
     // 4 - x datum
-    // 5 - layout
-    char* bp = actor->bp = sp - 5 * sizeof(datum_t);
+    // 5 - layout word
+    // -
+    char* bp = actor->bp = sp - 6 * sizeof(datum_t);
     if (READ_DATUM(bp, 3) != &foo_class_2) // x :: Integer
         return runtime_type_error(sp, actor);
-    datum_t r4 = READ_DATUM(sp, 4);
-    datum_t r0 = POP_FRAME(sp, bp);
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c3 = READ_DATUM(bp, 3);
+    datum_t d4 = READ_DATUM(bp, 4);
+    sp = bp;
     PUSH_DATUM(sp, &foo_class_2);
-    PUSH_DATUM(sp, ((int64_t)r4 + (int64_t)r4));
+    PUSH_DATUM(sp, ((int64_t)d4 + (int64_t)d4));
     PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, r0);
+    PUSH_DATUM(sp, d0);
     return sp;
 }
 "!
@@ -3652,10 +3813,23 @@ struct FooSelector foo_selector_8 = \{
 
 // #<CpsGraph Test#test>
 char* foo_method_function_10(char* sp, struct Actor* actor) \{
-    actor->bp = sp;
+    // 0 - $return
+    // 1 - $receiver class
+    // 2 - $receiver datum
+    // 3 - layout word
+    // -
+    // 4 - $value class
+    // 5 - $value datum
+    // 6 - layout word
+    char* bp = actor->bp = sp - 4 * sizeof(datum_t);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(1));
+    datum_t c1 = READ_DATUM(bp, 1);
+    datum_t d2 = READ_DATUM(bp, 2);
     PUSH_DATUM(sp, foo_continuation_11);
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -3));
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -2));
+    PUSH_DATUM(sp, c1);
+    PUSH_DATUM(sp, d2);
     PUSH_DATUM(sp, IMMS(1) | OBJS(1));
     PUSH_DATUM(sp, foo_builtin_6); // Test#opaqueIdentity
     return sp;
@@ -3663,12 +3837,19 @@ char* foo_method_function_10(char* sp, struct Actor* actor) \{
 
 // #<Continuation $bind:13>
 char* foo_continuation_11(char* sp, struct Actor* actor) \{
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, -4));
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 4, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 5, READ_DATUM(sp, -2));
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c4 = READ_DATUM(bp, 4);
+    datum_t d5 = READ_DATUM(bp, 5);
+    sp = bp;
+    PUSH_DATUM(sp, d0);
     PUSH_DATUM(sp, &foo_class_1);
     PUSH_DATUM(sp, &foo_class_13);
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, 0));
-    PUSH_DATUM(sp, READ_DATUM(actor->bp, 1));
-    PUSH_DATUM(sp, IMMS(1) | OBJS(12));
+    PUSH_DATUM(sp, c4);
+    PUSH_DATUM(sp, d5);
+    PUSH_DATUM(sp, IMMS(1) | OBJS(2));
     PUSH_DATUM(sp, foo_builtin_12); // Test class#typecheck:
     return sp;
 \}
