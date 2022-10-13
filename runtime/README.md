@@ -19,7 +19,7 @@ backend.
   with work stealing, and delimited multi-shot continuations.
 
 - Decent performance: non-allocating loops with only known calls should
-  have at most 50% overhead over C code with similar functionality.
+  have at most 1.5 x overhead over C code with similar functionality.
   
 ## Executor Pool
 
@@ -46,7 +46,7 @@ another, or goes to sleep waiting for new Actors to be created it if
 cannot.
 
 Future version of Foolang will support more complex load balancing between
-Executors.
+Executors, but that is an unnecessary complication at the moment.
 
 An Executor has
 - Id: position of this Executor in the Executor Pool's array.
@@ -61,15 +61,13 @@ An Executor has
 ### Running an Actor
 
 One tick of a timeslice consists of:
-- Executor fetches the current continuation from top of the stack.
+- Executor fetches the current continuation from top of the actor's stack.
 - Executor calls the current continuation with current stack pointer and
   the Actor object.
 - The continuation returns the next stack pointer.
 
-In addition 
-
-Alternatively, the continuation can also yield to its yieldpoint, which
-is set
+This is repeated until the timeslice runs out, or continuation returns NULL
+as the next stack pointer.
 
 ## Actors
 
@@ -82,31 +80,41 @@ private stack, heap, and dynamic variable bindings.
 Actors have following states:
 - READY: Ready for execution by an Executor.
 - RUNNING: Currently being exectuted by an Executor.
-- WAITING: Waiting for something in order to become READY.
-- DONE: Has completed all its work.
+- EXITING: Has completed all its work.
 
 Actors have:
 - Stack
 - Stack pointer
 - Base pointer
 - Heap
-- Yieldpoint (A pointer to a C jmp_buf.)
-
-Base pointer is _only_ used from inside actor code. As far as the
-runtime is concerned, it could point to the moon. Actually it is
-set by the method prelude to point to the start of the arguments,
-ie. (1 + nargs) * 2 words down from stack pointer. (1 for receiver.)
 
 ### Actor Stack
 
-The from top down when READY or WAITING:
+The from top down when READY.
 
 1. Current Continuation. (Function pointer.)
-2. Frame layout word.
+2. Stack layout word.
 3. Variable amount of data, size and layout determined by the layout word.
-4. Next Continuation.
+4. Stack layout word.
 5. Etc.
 
-# SKETCH
+Practically this means that on entry to a continuation the stack reads:
 
-## 
+- Layout for arguments and continuation
+  - Arguments
+  - Return continuation
+- Layout for previous frame
+  - Variables
+- Layout for previous frame arguments and continuation
+  - Arguments
+  - Return continuation
+
+So calling a return continuation of a method should look like:
+
+1. Make a temporary copy of the return continuation address.
+2. Make a temporary copy of the return value.
+3. Pop current frame, including arguments.
+4. Push return value.
+5. Push layout word for return value.
+6. Push return continuation.
+7. Return current SP.

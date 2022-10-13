@@ -110,6 +110,13 @@ extend Dictionary
                            optional: key
                            value: (self at: key) }!
 
+    method doSorted: block
+        self keys sorted
+            do: { |key|
+                  block
+                      optional: key
+                      value: (self at: key) }!
+
     method doValues: block
         self doKeys: { |key|
                        block
