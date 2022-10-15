@@ -3395,7 +3395,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
                       self emitMethodFunctionPrelude }
             ifFalse: { backend emitFunctionHeader: aCont.
                        self emitContinuationPrelude: aCont }.
-        self emitBody: aCont.
+        aCont target visitBy: self with: aCont args.
         backend emitFunctionFooter!
 
 
@@ -3488,23 +3488,12 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
             ; print: aVar type name
             ; print: "\n        return runtime_type_error(sp, actor);\n"!
 
-
-    method emitBody: aCont
-        (Application includes: aCont target)
-            => { return self emitApplication: aCont target
-                             with: aCont args }.
-        (Variable includes: aCont target)
-            => { return self emitCall: aCont target
-                             with: aCont args }.
-        Error raise: "UNIMPLEMENTED emitBody: {aCont target}"!
-
-
-    method emitCall: aCont with: args
+    method visitVariable: target with: args
         ForAllVariables
-            in: (args append: [aCont])
+            in: (args append: [target])
             doSorted: { |each| self emitCopyVariable: each }.
         -- Iff graph exit, then this is a tail call: pop frame by setting sp = bp.
-        aCont is graph exit
+        target is graph exit
             ifTrue: { backend output print: "    sp = bp;\n" }.
         args do: { |each|
                    CArgument
@@ -3514,7 +3503,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
         backend output
             print: "    PUSH_DATUM(sp, OBJS({args size}));\n".
         CArgument
-            emit: aCont
+            emit: target
             withBackend: backend
             withStackmap: stackmap.
         backend output
@@ -3542,7 +3531,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
             print: "    datum_t {info datumTemp} = READ_DATUM(bp, {info datumSlot});\n"!
 
 
-    method emitApplication: anApp with: args
+    method visitApplication: anApp with: args
         -- Where the application will return.
         let target = anApp target.
         -- Function we're applying.
