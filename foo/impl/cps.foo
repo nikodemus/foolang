@@ -3458,6 +3458,25 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
                       backend output print: "    PUSH_DATUM(sp, OBJS({frameSize / 2}));\n" }!
 
 
+    method emitContinuationPrelude: aCont
+        backend output print: "    char* bp = actor->bp;\n".
+        -- FIXME: It would be really nice to avoid this copy to
+        -- reserved stack-slot, but for now it keeps things nice
+        -- and simple. (...and makes debugging easier as well.)
+        let params = aCont params.
+        let next = -(params size * 2 + 1).
+        aCont params
+            do: { |each|
+                  let info = stackmap at: each.
+                  info classSlot
+                      => { |slot|
+                           backend output
+                               print: "    WRITE_DATUM(bp, {slot}, READ_DATUM(sp, {next}));\n" }.
+                  backend output
+                      print: "    WRITE_DATUM(bp, {info datumSlot}, READ_DATUM(sp, {next+1}));\n".
+                  next = next + 2 }!
+
+
     method emitParameterTypecheck: aVar
         let actualClass = (stackmap at: aVar) classSlot.
         let expectedClass = (backend declare: aVar type) name.
@@ -3471,22 +3490,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
     method emitBody: aCont
         aCont is graph entry
-            ifFalse: { backend output print: "    char* bp = actor->bp;\n".
-                       -- FIXME: It would be really nice to avoid this copy to
-                       -- reserved stack-slot, but for now it keeps things nice
-                       -- and simple. (...and makes debugging easier as well.)
-                       let params = aCont params.
-                       let next = -(params size * 2 + 1).
-                       aCont params
-                           do: { |each|
-                                 let info = stackmap at: each.
-                                 info classSlot
-                                     => { |slot|
-                                          backend output
-                                              print: "    WRITE_DATUM(bp, {slot}, READ_DATUM(sp, {next}));\n" }.
-                                 backend output
-                                     print: "    WRITE_DATUM(bp, {info datumSlot}, READ_DATUM(sp, {next+1}));\n".
-                                 next = next + 2 } }.
+            ifFalse: { self emitContinuationPrelude: aCont }.
         (Application includes: aCont target)
             => { return self emitApplication: aCont target
                              with: aCont args }.
