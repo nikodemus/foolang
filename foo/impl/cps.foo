@@ -2445,7 +2445,7 @@ class CpsConverter { graph var next classMap namespace }
         let value = syntax value.
         let classDef = classMap
                            at: value classOf
-                           ifNone: { Error raise: "No target class for {value} in: {classMap}" }.
+                           ifNone: { Error raise: "No class for literal {value}::{value classOf name}. Available classes: {classMap keys collect: #name}" }.
         let instance =  Instance
                            class: classDef
                            datum: value.
