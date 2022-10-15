@@ -879,7 +879,9 @@ define MethodClassDefinition
 define SelectorClassDefinition
     (ClassDefinition
          name: "Selector"
-         methods: [])!
+         hostClass: CpsSelector
+         methods: []
+         directMethods: [])!
 
 
 define StandardDefinitions
@@ -2413,6 +2415,24 @@ class CpsConverter { graph var next classMap namespace }
             ifFalse: { self next findBinding: name }!
 
 
+    method findLiteralClass: value
+        classMap
+            at: value classOf
+            ifNone: { Error raise: "No class for literal {value}::{value classOf name}. Available classes: {classMap keys collect: #name}" }!
+
+
+    method literalRef: value target: target
+        let classDef = self findLiteralClass: value.
+        let instance = Instance
+                           class: classDef
+                           datum: value.
+        let const = graph ensureConstant: instance.
+        graph continuation: "$const_ref"
+              params: []
+              target: target
+              args: [const]!
+
+
     method visitBlock: syntax with: cc
         let blockReturn = graph makeVariable: "$ret".
         let blockVars = syntax parameters
@@ -2442,18 +2462,13 @@ class CpsConverter { graph var next classMap namespace }
 
 
     method visitLiteral: syntax with: cc
-        let value = syntax value.
-        let classDef = classMap
-                           at: value classOf
-                           ifNone: { Error raise: "No class for literal {value}::{value classOf name}. Available classes: {classMap keys collect: #name}" }.
-        let instance =  Instance
-                           class: classDef
-                           datum: value.
-        let const = graph ensureConstant: instance.
-        graph continuation: "$const_ref"
-              params: []
-              target: cc
-              args: [const]!
+        self literalRef: syntax value
+             target: cc!
+
+
+    method visitSelector: syntax with: cc
+        self literalRef: (namespace intern: syntax name)
+             target: cc!
 
 
     method visitParens: syntax with: cc
@@ -4427,6 +4442,16 @@ end"
                equals: "
 $entry:2($return:3, $receiver::A class:4):
     $return:3(387)
+"!
+
+
+    method test_convert_selector
+        let cps = self convertExpr: "#foobar"
+                       with: [SelectorClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    $return:3(#<CpsSelector foobar>)
 "!
 
 
