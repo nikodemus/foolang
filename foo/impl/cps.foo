@@ -3510,14 +3510,6 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
             print: "    return sp;\n"!
 
 
-    method collectVarsFrom: expr to: set
-        (Variable includes: expr)
-            => { return set add: expr }.
-        (Global includes: expr)
-            => { return False }.
-        Error raise: "UNIMPLEMENTED collectVarsFrom:to: {expr}"!
-
-
     method emitCopyVariable: var
         let info = stackmap at: var.
         info datumTemp: "d{info datumSlot}".
