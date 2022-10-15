@@ -3301,6 +3301,14 @@ class CArgument { backend stackmap }
             ; print: "    PUSH_DATUM(sp, &{ownClassInfo name});\n"!
 
 
+    method visitConstant: aConst
+        let classInfo = backend declare: aConst type :: ClassDefinition.
+        let datumInfo = backend declare: aConst value.
+        backend output
+            ; print: "   PUSH_DATUM(sp, {classInfo name});\n"
+            ; print: "   PUSH_DATUM(sp, {datumInfo name});\n"!
+
+
     method visitContinuation: aCont
         backend output
             ; print: "    PUSH_DATUM(sp, {(backend declare: aCont) name :: String});\n"!
