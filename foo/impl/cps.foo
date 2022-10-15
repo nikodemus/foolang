@@ -4200,6 +4200,20 @@ struct FooClass foo_class_1 = \{
 \};
 "!
 
+    method test_c_backend_emit_main
+        let ns = Namespace standard.
+        let def = self convertClass: "class Main \{}
+                                          method run: command in: system
+                                              42!
+                                      end"
+                      with: [IntegerClassDefinition]
+                      in: ns.
+        assert that: { CBackend emitMainToString: def }
+               equals: "
+int main(int argc, char** argv) \{
+\}
+"!
+
 
     method test_convert_addition_of_integers_optimizes_to_operation_addi
         let cps = self convertExpr: "let a = X a :: Integer. let b = X b :: Integer. a + b"
