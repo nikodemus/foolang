@@ -625,6 +625,7 @@ end
 
 class ClassDefinition { name
                         hostClass
+                        printName
                         ownClassDefinition
                         methodDictionary }
     is Object
@@ -635,6 +636,7 @@ class ClassDefinition { name
         self
             name: name
             hostClass: False
+            printName: #toString
             methods: []
             directMethods: []!
 
@@ -643,6 +645,7 @@ class ClassDefinition { name
         self
             name: name
             hostClass: False
+            printName: #toString
             methods: methods
             directMethods: []!
 
@@ -651,6 +654,7 @@ class ClassDefinition { name
         self
             name: name
             hostClass: False
+            printName: #toString
             methods: methods
             directMethods: directMethods!
 
@@ -659,6 +663,7 @@ class ClassDefinition { name
         self
             name: hostClass name
             hostClass: hostClass
+            printName: #toString
             methods: methods
             directMethods: []!
 
@@ -667,22 +672,26 @@ class ClassDefinition { name
         self
             name: name
             hostClass: hostClass
+            printName: #toString
             methods: methods
             directMethods: []!
 
 
     direct method name: name
                   hostClass: hostClass
+                  printName: printName
                   methods: methods
                   directMethods: directMethods
         let instanceMethodDictionary = MethodDictionary new.
         let directMethodDictionary = MethodDictionary new.
         let ownClassDefinition = self name: "{name} class"
                                       hostClass: hostClass classOf
+                                      printName: #toString
                                       ownClassDefinition: ClassClassDefinition
                                       methodDictionary: directMethodDictionary.
         let classDefinition = self name: name
                                    hostClass: hostClass
+                                   printName: printName
                                    ownClassDefinition: ownClassDefinition
                                    methodDictionary: instanceMethodDictionary.
 
@@ -763,6 +772,10 @@ class ClassDefinition { name
 
     method toString
         name!
+
+
+    method printName: instance
+        printName sendTo: instance!
 end
 
 
@@ -810,15 +823,17 @@ class Instance { _class::ClassDefinition
         _datum!
 
     method printName
-        self toString!
+        _class isPrimitive
+            ifTrue: { _class printName: _datum }
+            ifFalse: { "#<Instance {_class name}>" }!
 
-    method toString
+    method displayString
         _class isPrimitive
             ifTrue: { _datum displayString }
             ifFalse: { "#<Instance {_class name}>" }!
 
-    method displayString
-        self toString!
+    method toString
+        self displayString!
 
     method == other
         (Instance includes: other)
@@ -831,6 +846,7 @@ define ClassClassDefinition
     let classMethodDictionary = MethodDictionary new.
     let new = (ClassDefinition name: "Class"
                                hostClass: Class
+                               printName: #toString
                                ownClassDefinition: False
                                methodDictionary: classMethodDictionary).
     new ownClassDefinition: new.
@@ -880,6 +896,7 @@ define SelectorClassDefinition
     (ClassDefinition
          name: "Selector"
          hostClass: CpsSelector
+         printName: #printName
          methods: []
          directMethods: [])!
 
@@ -3812,7 +3829,7 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
 "!
 
 
-method test_c_backend_ifTrue_ifFalse
+    method test_c_backend_ifTrue_ifFalse
         let ns = Namespace standard.
         let def = self convertClass: "class IfTrueTest \{}
                                           method if: x :: Boolean then: a else: b
@@ -4451,7 +4468,7 @@ $entry:2($return:3, $receiver::A class:4):
         assert that: { CpsPrinter printToString: cps }
                equals: "
 $entry:2($return:3):
-    $return:3(#<CpsSelector foobar>)
+    $return:3(#foobar)
 "!
 
 
