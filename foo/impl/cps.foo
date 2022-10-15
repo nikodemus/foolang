@@ -3372,13 +3372,12 @@ class CVarInfo { classSlot datumSlot classTemp datumTemp }
 end
 
 
-class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
+class CpsGraphCBackend { backend graph stackmap frameSize }
 
     direct method emit: graph withBackend: backend
         let graphBackend = self backend: backend
                                 graph: graph
                                 stackmap: False
-                                paramSize: 0
                                 frameSize: 0.
         graph continuations
             do: { |each| graphBackend emitContinuation: each }!
@@ -3427,7 +3426,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
         backend output
             ; print: "    // {next} - layout word\n    // -\n".
         next = next + 1.
-        paramSize = next.
+        let nParams = next.
         graph variables
             doSorted: { |each|
                         (map has: each)
@@ -3441,13 +3440,14 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
                                 next = next + 2 } }.
         frameSize > 0
             ifTrue: { backend output print: "    // {next} - layout word\n" }.
-        stackmap = map!
+        stackmap = map.
+        nParams!
 
 
     method emitMethodFunctionPrelude
-        self emitStackmap.
+        let nParams = self emitStackmap.
         backend output
-            ; print: "    char* bp = actor->bp = sp - {paramSize} * sizeof(datum_t);\n".
+            ; print: "    char* bp = actor->bp = sp - {nParams} * sizeof(datum_t);\n".
         (graph entry params rest rest)
             do: { |each|
                   each type
