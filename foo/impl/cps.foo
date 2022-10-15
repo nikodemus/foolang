@@ -3392,7 +3392,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
         -- the CpsGraph, not the continuation.
         aCont is graph entry
             ifTrue: { backend emitFunctionHeader: graph.
-                      self emitPrelude }
+                      self emitMethodFunctionPrelude }
             ifFalse: { backend emitFunctionHeader: aCont }.
         self emitBody: aCont.
         backend emitFunctionFooter!
@@ -3445,7 +3445,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
         stackmap = map!
 
 
-    method emitPrelude
+    method emitMethodFunctionPrelude
         self emitStackmap.
         backend output
             ; print: "    char* bp = actor->bp = sp - {paramSize} * sizeof(datum_t);\n".
