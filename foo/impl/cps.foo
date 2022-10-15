@@ -3426,7 +3426,6 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
         backend output
             ; print: "    // {next} - layout word\n    // -\n".
         next = next + 1.
-        let nParamSlots = next.
         graph variables
             doSorted: { |each|
                         (stackmap has: each)
@@ -3440,14 +3439,19 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
                                 frameSize = frameSize + 2.
                                 next = next + 2 } }.
         frameSize > 0
-            ifTrue: { backend output print: "    // {next} - layout word\n" }.
-        nParamSlots!
+            ifTrue: { backend output print: "    // {next} - layout word\n" }!
+
+    method basePointerOffset
+        -- First slot is the return continuation. Everything else is datum.
+        -- The params are the followed by the layout word. Ergo x 2.
+        let nParams :: Integer = graph entry params size.
+        nParams * 2!
 
 
     method emitMethodFunctionPrelude
-        let nParamSlots = self emitStackmap.
+        self emitStackmap.
         backend output
-            ; print: "    char* bp = actor->bp = sp - {nParamSlots} * sizeof(datum_t);\n".
+            ; print: "    char* bp = actor->bp = sp - {self basePointerOffset} * sizeof(datum_t);\n".
         (graph entry params rest rest)
             do: { |each|
                   each type
