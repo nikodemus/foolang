@@ -3749,7 +3749,7 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
 "!
 
 
-    method test_c_backend_ifTrue_ifFalse
+    method no_test_c_backend_ifTrue_ifFalse
         let ns = Namespace standard.
         let def = self convertClass: "class IfTrueTest \{}
                                           method oddOrEven: x :: Boolean
