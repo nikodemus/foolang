@@ -3393,7 +3393,8 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
         aCont is graph entry
             ifTrue: { backend emitFunctionHeader: graph.
                       self emitMethodFunctionPrelude }
-            ifFalse: { backend emitFunctionHeader: aCont }.
+            ifFalse: { backend emitFunctionHeader: aCont.
+                       self emitContinuationPrelude: aCont }.
         self emitBody: aCont.
         backend emitFunctionFooter!
 
@@ -3489,8 +3490,6 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
 
     method emitBody: aCont
-        aCont is graph entry
-            ifFalse: { self emitContinuationPrelude: aCont }.
         (Application includes: aCont target)
             => { return self emitApplication: aCont target
                              with: aCont args }.
