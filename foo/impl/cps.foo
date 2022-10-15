@@ -3086,8 +3086,9 @@ class CBackend { output declared emitted }
         -- be responsible for the whgile function output.
         --
         -- Common code can still be factored out.
-        (CpsGraphCBackend backend: self graph: graph)
-            emit!
+        CpsGraphCBackend
+            emit: graph
+            withBackend: self!
 
 
     method emitConstructor: ctor
@@ -3373,17 +3374,14 @@ end
 
 class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
-    direct method backend: backend graph: graph
-        self backend: backend
-             graph: graph
-             stackmap: False
-             paramSize: 0
-             frameSize: 0!
-
-
-    method emit
+    direct method emit: graph withBackend: backend
+        let graphBackend = self backend: backend
+                                graph: graph
+                                stackmap: False
+                                paramSize: 0
+                                frameSize: 0.
         graph continuations
-            do: { |each| self emitContinuation: each }!
+            do: { |each| graphBackend emitContinuation: each }!
 
 
     method emitContinuation: aCont
