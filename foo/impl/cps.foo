@@ -3382,23 +3382,23 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
 
     method emit
-        backend emitFunctionHeader: graph.
-        self generateStackmap.
-        self emitContinuation: graph entry.
-        (graph continuations reject: { |each| each is graph entry })
-            do: { |each|
-                  self emitContinuation: each }!
+        graph continuations
+            do: { |each| self emitContinuation: each }!
 
 
     method emitContinuation: aCont
+        -- Currently entry continuation is the method function
+        -- entry point, and therefore gets its header from the
+        -- the CpsGraph, not the continuation.
         aCont is graph entry
-            ifTrue: { self emitPrelude }
+            ifTrue: { backend emitFunctionHeader: graph.
+                      self emitPrelude }
             ifFalse: { backend emitFunctionHeader: aCont }.
         self emitBody: aCont.
         backend emitFunctionFooter!
 
 
-    method generateStackmap
+    method emitStackmap
         (stackmap is False) assert: "Stackmap exists already!".
         let map = Dictionary new.
         let params = graph entry params.
@@ -3446,6 +3446,7 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
 
 
     method emitPrelude
+        self emitStackmap.
         backend output
             ; print: "    char* bp = actor->bp = sp - {paramSize} * sizeof(datum_t);\n".
         (graph entry params rest rest)
