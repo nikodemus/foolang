@@ -1919,6 +1919,11 @@ class Select { id::Integer
     is ContinuationTarget
     is UseTracking
 
+
+    method toString
+        "#<Select cond: {cond printName} then: {then printName} else: {else printName}>"!
+
+
     direct method id: id cond: cond then: then else: else
         let new = self id: id
                        cond: cond
@@ -1975,6 +1980,10 @@ class Select { id::Integer
 
     method visitBy: visitor
         visitor visitSelect: self!
+
+
+    method visitBy: visitor with: arg
+        visitor visitSelect: self with: arg!
 
 
     method doSuccessors: block
@@ -2972,12 +2981,6 @@ class CBackend { output declared emitted }
             }!
 
 
-    method declaration: thing
-        declared
-            at: thing
-            ifNone: { Error raise: "No declaration for {thing}" }!
-
-
     method markEmitted: thing
         (self emittedInfo: thing)
             => { Error raise: "Already emitted: {thing}" }.
@@ -3069,7 +3072,7 @@ class CBackend { output declared emitted }
             ; print: "\n// "
             ; println: function displayString
             ; print: "char* "
-            ; print: (self declaration: function) name
+            ; print: (self declare: function) name
             ; print: "(char* sp, struct Actor* actor) \{\n"!
 
 
@@ -3092,7 +3095,7 @@ class CBackend { output declared emitted }
 
 
     method emitConstructor: ctor
-        let classInfo = self declaration: ctor classDefinition.
+        let classInfo = self declare: ctor classDefinition.
         classInfo is False
             ifTrue: { Error raise: "Class definition for {ctor} not yet declared" }.
         self emitFunctionHeader: ctor.
@@ -3184,7 +3187,7 @@ class CBackend { output declared emitted }
         output print: ",\n    .data = \{\n".
         methodDictionary
             do: { |each|
-                  let info = self declaration: each.
+                  let info = self declare: each.
                   output print: "        &".
                   output print: info name.
                   output print: ", // ".
@@ -3526,6 +3529,23 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
             print: "    return sp;\n"!
 
 
+    method visitSelect: aSelect with: args
+        args isEmpty assert: "FIXME: Select with args".
+        let cond = aSelect cond.
+        cond type is BooleanClassDefinition
+            assert: "FIXME: Select with non-boolean cond".
+        let condInfo = stackmap at: cond.
+        let thenInfo = backend declare: aSelect then.
+        let elseInfo = backend declare: aSelect else.
+        backend output
+            ; print: "    if (READ_DATUM(bp, {condInfo datumSlot})) \{\n"
+            ; print: "        PUSH_DATUM(sp, {thenInfo name});\n"
+            ; print: "    \} else \{\n"
+            ; print: "        PUSH_DATUM(sp, {elseInfo name});\n"
+            ; print: "    \}\n"
+            ; print: "    return sp;\n"!
+
+
     method visitApplication: anApp with: args
         -- Where the application will return.
         let target = anApp target.
@@ -3734,27 +3754,79 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
     method test_c_backend_ifTrue_ifFalse
         let ns = Namespace standard.
         let def = self convertClass: "class IfTrueTest \{}
-                                          method oddOrEven: x :: Boolean
-                                              x ifTrue: \{ 1 \} ifFalse: \{ 2 \}!
+                                          method if: x :: Boolean then: a else: b
+                                              x ifTrue: \{ a \} ifFalse: \{ b \}!
                                       end"
-                      with: [IntegerClassDefinition, BooleanClassDefinition]
+                      with: [BooleanClassDefinition]
                       in: ns.
         -- Sanity check the CPS first
-        let m = def findMethod: (ns intern: "oddOrEven:").
+        let m = def findMethod: (ns intern: "if:then:else:").
         assert that: { CpsPrinter printToString: m cps }
                equals: "
-$entry:2($return:3, $receiver::IfTrueTest:4, x::Boolean:8):
-    select:30(x::Boolean:8, $block:25, $block:20)()
-$block:25():
-    $return:3(1)
+$entry:2($return:3, $receiver::IfTrueTest:4, x::Boolean:7, a:8, b:9):
+    select:29(x::Boolean:7, $block:24, $block:20)()
+$block:24():
+    $return:3(a:8)
 $block:20():
-    $return:3(2)
+    $return:3(b:9)
 ".
         -- Test the C code
         let backend = CBackend output: StringOutput new.
         backend emitFunction: m impl.
         assert that: { backend output content }
-               equals: "TODO"!
+               equals: "
+// #<CpsGraph IfTrueTest#if:then:else:>
+char* foo_method_function_1(char* sp, struct Actor* actor) \{
+    // 0 - $return
+    // 1 - $receiver class
+    // 2 - $receiver datum
+    // 3 - x class
+    // 4 - x datum
+    // 5 - a class
+    // 6 - a datum
+    // 7 - b class
+    // 8 - b datum
+    // 9 - layout word
+    // -
+    char* bp = actor->bp = sp - 10 * sizeof(datum_t);
+    if (READ_DATUM(bp, 3) != &foo_class_2) // x :: Boolean
+        return runtime_type_error(sp, actor);
+    if (READ_DATUM(bp, 4)) \{
+        PUSH_DATUM(sp, foo_continuation_3);
+    } else \{
+        PUSH_DATUM(sp, foo_continuation_4);
+    }
+    return sp;
+}
+
+// #<Continuation $block:20>
+char* foo_continuation_4(char* sp, struct Actor* actor) \{
+    char* bp = actor->bp;
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c7 = READ_DATUM(bp, 7);
+    datum_t d8 = READ_DATUM(bp, 8);
+    sp = bp;
+    PUSH_DATUM(sp, c7);
+    PUSH_DATUM(sp, d8);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+
+// #<Continuation $block:24>
+char* foo_continuation_3(char* sp, struct Actor* actor) \{
+    char* bp = actor->bp;
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c5 = READ_DATUM(bp, 5);
+    datum_t d6 = READ_DATUM(bp, 6);
+    sp = bp;
+    PUSH_DATUM(sp, c5);
+    PUSH_DATUM(sp, d6);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+"!
 
 
     method test_c_backend_integration_test
