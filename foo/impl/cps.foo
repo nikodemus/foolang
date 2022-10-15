@@ -3388,13 +3388,14 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
         backend emitFunctionFooter.
         (graph continuations reject: { |each| each is graph entry })
             do: { |each|
-                  backend emitFunctionHeader: each.
-                  self emitBody: each.
+                  self emitContinuation: each.
                   backend emitFunctionFooter }!
 
 
     method emitContinuation: aCont
-        self emitPrelude.
+        aCont is graph entry
+            ifTrue: { self emitPrelude }
+            ifFalse: { backend emitFunctionHeader: aCont }.
         self emitBody: aCont!
 
 
