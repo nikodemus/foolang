@@ -3303,10 +3303,9 @@ class CArgument { backend stackmap }
 
     method visitConstant: aConst
         let classInfo = backend declare: aConst type :: ClassDefinition.
-        let datumInfo = backend declare: aConst value.
         backend output
-            ; print: "   PUSH_DATUM(sp, {classInfo name});\n"
-            ; print: "   PUSH_DATUM(sp, {datumInfo name});\n"!
+            ; print: "    PUSH_DATUM(sp, {classInfo name});\n"
+            ; print: "    PUSH_DATUM(sp, {aConst value});\n"!
 
 
     method visitContinuation: aCont
@@ -3778,7 +3777,24 @@ $entry:2($return:3, $receiver::IntegerConstantTest:4):
         let backend = CBackend output: StringOutput new.
         backend emitFunction: m impl.
         assert that: { backend output content }
-               equals: "TODO"!
+               equals: "
+// #<CpsGraph IntegerConstantTest#value>
+char* foo_method_function_1(char* sp, struct Actor* actor) \{
+    // 0 - $return
+    // 1 - $receiver class
+    // 2 - $receiver datum
+    // 3 - layout word
+    // -
+    char* bp = actor->bp = sp - 4 * sizeof(datum_t);
+    datum_t d0 = READ_DATUM(bp, 0);
+    sp = bp;
+    PUSH_DATUM(sp, foo_class_2);
+    PUSH_DATUM(sp, 123123);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+"!
 
 
 method test_c_backend_ifTrue_ifFalse
