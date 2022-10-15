@@ -3377,7 +3377,7 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
     direct method emit: graph withBackend: backend
         let graphBackend = self backend: backend
                                 graph: graph
-                                stackmap: False
+                                stackmap: Dictionary new
                                 frameSize: 0.
         graph continuations
             do: { |each| graphBackend emitContinuation: each }!
@@ -3397,8 +3397,6 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
 
 
     method emitStackmap
-        (stackmap is False) assert: "Stackmap exists already!".
-        let map = Dictionary new.
         let params = graph entry params.
         -- Stack has:
         --
@@ -3412,7 +3410,8 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
         --
         backend output print: "    // 0 - {graph exit name}\n".
         let next = 0.
-        map put: (CVarInfo datumSlot: next)
+        stackmap
+            put: (CVarInfo datumSlot: next)
             at: params first.
         next = next + 1.
         params rest
@@ -3420,34 +3419,35 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
                   backend output
                       ; print: "    // {next} - {each name} class\n"
                       ; print: "    // {next+1} - {each name} datum\n".
-                  map put: (CVarInfo classSlot: next datumSlot: next + 1)
+                  stackmap
+                      put: (CVarInfo classSlot: next datumSlot: next + 1)
                       at: each.
                   next = next + 2 }.
         backend output
             ; print: "    // {next} - layout word\n    // -\n".
         next = next + 1.
-        let nParams = next.
+        let nParamSlots = next.
         graph variables
             doSorted: { |each|
-                        (map has: each)
+                        (stackmap has: each)
                             ifFalse: {
                                 backend output
                                     ; print: "    // {next} - {each name} class\n"
                                     ; print: "    // {next+1} - {each name} datum\n".
-                                map put: (CVarInfo classSlot: next datumSlot: next + 1)
+                                stackmap
+                                    put: (CVarInfo classSlot: next datumSlot: next + 1)
                                     at: each.
                                 frameSize = frameSize + 2.
                                 next = next + 2 } }.
         frameSize > 0
             ifTrue: { backend output print: "    // {next} - layout word\n" }.
-        stackmap = map.
-        nParams!
+        nParamSlots!
 
 
     method emitMethodFunctionPrelude
-        let nParams = self emitStackmap.
+        let nParamSlots = self emitStackmap.
         backend output
-            ; print: "    char* bp = actor->bp = sp - {nParams} * sizeof(datum_t);\n".
+            ; print: "    char* bp = actor->bp = sp - {nParamSlots} * sizeof(datum_t);\n".
         (graph entry params rest rest)
             do: { |each|
                   each type
