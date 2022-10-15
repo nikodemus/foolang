@@ -3384,14 +3384,18 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
     method emit
         backend emitFunctionHeader: graph.
         self generateStackmap.
-        self emitPrelude.
-        self emitBody: graph entry.
+        self emitContinuation: graph entry.
         backend emitFunctionFooter.
         (graph continuations reject: { |each| each is graph entry })
             do: { |each|
                   backend emitFunctionHeader: each.
                   self emitBody: each.
                   backend emitFunctionFooter }!
+
+
+    method emitContinuation: aCont
+        self emitPrelude.
+        self emitBody: aCont!
 
 
     method generateStackmap
