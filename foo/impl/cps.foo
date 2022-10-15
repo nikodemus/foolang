@@ -2445,7 +2445,7 @@ class CpsConverter { graph var next classMap namespace }
         let value = syntax value.
         let classDef = classMap
                            at: value classOf
-                           ifNone: { Error raise: "No target class for {value} in: {classMap}" }.
+                           ifNone: { Error raise: "No class for literal {value}::{value classOf name}. Available classes: {classMap keys collect: #name}" }.
         let instance =  Instance
                            class: classDef
                            datum: value.
@@ -3301,6 +3301,13 @@ class CArgument { backend stackmap }
             ; print: "    PUSH_DATUM(sp, &{ownClassInfo name});\n"!
 
 
+    method visitConstant: aConst
+        let classInfo = backend declare: aConst type :: ClassDefinition.
+        backend output
+            ; print: "    PUSH_DATUM(sp, {classInfo name});\n"
+            ; print: "    PUSH_DATUM(sp, {aConst value});\n"!
+
+
     method visitContinuation: aCont
         backend output
             ; print: "    PUSH_DATUM(sp, {(backend declare: aCont) name :: String});\n"!
@@ -3751,7 +3758,46 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
 "!
 
 
-    method test_c_backend_ifTrue_ifFalse
+    method test_c_backend_integer_constant
+        let ns = Namespace standard.
+        let def = self convertClass: "class IntegerConstantTest \{}
+                                          method value
+                                              123123!
+                                      end"
+                      with: [IntegerClassDefinition]
+                      in: ns.
+        -- Sanity check the CPS first
+        let m = def findMethod: (ns intern: "value").
+        assert that: { CpsPrinter printToString: m cps }
+               equals: "
+$entry:2($return:3, $receiver::IntegerConstantTest:4):
+    $return:3(123123)
+".
+        -- Test the C code
+        let backend = CBackend output: StringOutput new.
+        backend emitFunction: m impl.
+        assert that: { backend output content }
+               equals: "
+// #<CpsGraph IntegerConstantTest#value>
+char* foo_method_function_1(char* sp, struct Actor* actor) \{
+    // 0 - $return
+    // 1 - $receiver class
+    // 2 - $receiver datum
+    // 3 - layout word
+    // -
+    char* bp = actor->bp = sp - 4 * sizeof(datum_t);
+    datum_t d0 = READ_DATUM(bp, 0);
+    sp = bp;
+    PUSH_DATUM(sp, foo_class_2);
+    PUSH_DATUM(sp, 123123);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+"!
+
+
+method test_c_backend_ifTrue_ifFalse
         let ns = Namespace standard.
         let def = self convertClass: "class IfTrueTest \{}
                                           method if: x :: Boolean then: a else: b
