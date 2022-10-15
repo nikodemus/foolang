@@ -3563,16 +3563,6 @@ class CpsGraphCBackend { backend graph stackmap paramSize frameSize }
             ; print: "    PUSH_DATUM(sp, {functionInfo name}); // {function printName}\n"
             ; print: "    return sp;\n"!
 
-
-    method emitDatum: arg
-        (Operation includes: arg)
-            => {
-                 (arg kind is DATUM_OF)
-                     => { let expr = arg args first.
-                          (Variable includes: expr)
-                              => { return "READ_DATUM(bp, {(stackmap at: expr) datumSlot})" } } }.
-        Error raise: "UNIMPLEMENTED emitDatum: {arg}"!
-
 end
 
 
