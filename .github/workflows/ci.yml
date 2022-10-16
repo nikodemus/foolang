@@ -237,6 +237,15 @@ jobs:
       - name: Test CPS
         run: ./bin/bootstrap-interpreter foo/impl/cps.foo --use=foo/lib
 
+      - name: Test Runtime
+        run: make test-runtime
+
+      - name: Test C Backend
+        run: make test-c-backend
+
+      - name: Test Benchmark
+        run: make test-benchmark
+
   test-full-bootstrap:
     # Not running this on Windows because the linker clang uses
     # there doesn't accept either VS style nor GNU style stack-
