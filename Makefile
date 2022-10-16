@@ -8,10 +8,19 @@ all:
 
 .EXTRA_PREREQS:= $(abspath $(lastword $(MAKEFILE_LIST)))
 
-CC = clang
+CC := $(shell bash ./find-clang.sh cc)
+AR := $(shell bash ./find-clang.sh ar)
+
+ifeq ($(CC), "")
+	$(error Could not clang versions for CC and AR!)
+endif
+
+$(info Using CC = $(CC), AR = $(AR))
+
 CPPFLAGS = -Iruntime -Iext
 CFLAGS = -g -Wall -Wextra -fsanitize=address -fsanitize=undefined
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
+COMPILE.a = $(AR) rc
 COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
 COMPILE.exe = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS)
 SILENCE = | (grep -v "Creating library" || true)
@@ -74,7 +83,7 @@ build/test/benchmark:
 
 build/foolang.a: $(RUNTIME_OBJS)
 	$(LOG_BUILD)
-	@llvm-ar rc $@ $(RUNTIME_OBJS)
+	@$(COMPILE.a) $(OUTPUT_OPTION) $(RUNTIME_OBJS)
 
 build/test/runtime/test$(EXE): $(RUNTIME_TEST_OBJS) build/foolang.a
 	$(LOG_BUILD)
