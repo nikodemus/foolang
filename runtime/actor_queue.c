@@ -31,6 +31,12 @@ struct ActorQueue* make_ActorQueue() {
   return queue;
 }
 
+void free_ActorQueue(struct ActorQueue* queue) {
+  free_SystemLock(queue->lock);
+  free(queue->actors);
+  free(queue);
+}
+
 void enqueue_actor(struct ActorQueue* queue, struct Actor* actor) {
   system_lock(queue->lock);
   assert(queue->start < queue->capacity);

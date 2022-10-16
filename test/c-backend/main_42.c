@@ -648,6 +648,9 @@ int main(int argc, char** argv) {
     enqueue_actor(pool->executors[0]->queue, mainActor);
     start_pool(pool);
     wait_for_actor_exit(mainActor, 0);
+    free_Actor(mainActor);
+    stop_pool(pool);
+    free_ExecutorPool(pool);
     printf(" INFO - exit\n");
     return 0;
 }

@@ -3089,6 +3089,9 @@ class CBackend { output declared emitted dependencies }
             ; print: "    enqueue_actor(pool->executors[0]->queue, mainActor);\n"
             ; print: "    start_pool(pool);\n"
             ; print: "    wait_for_actor_exit(mainActor, 0);\n"
+            ; print: "    free_Actor(mainActor);\n"
+            ; print: "    stop_pool(pool);\n"
+            ; print: "    free_ExecutorPool(pool);\n"
             ; print: "    printf(\" INFO - exit\\n\");\n"
             ; print: "    return 0;\n"
             ; print: "\}\n"!

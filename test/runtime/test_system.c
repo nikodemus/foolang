@@ -22,10 +22,9 @@ void SystemLock_test_function(void* data) {
 }
 
 void test_SystemLock(void) {
-    struct ThreadInfo* info = make_ThreadInfo(SystemLock_test_function, NULL);
     SystemLock_test_lock = make_SystemLock();
     system_lock(SystemLock_test_lock);
-    SystemThread_t thread = make_SystemThread(info);
+    SystemThread_t thread = make_SystemThread(SystemLock_test_function, NULL);
     system_sleep_ms(1);
     SystemLock_test_state = 1;
     system_unlock(SystemLock_test_lock);
@@ -44,14 +43,12 @@ void SystemThread_test_function(void* data) {
 }
 
 void test_SystemThread(void) {
-    struct ThreadInfo* info = make_ThreadInfo(SystemThread_test_function,
-                                              &SystemThread_test_var);
     size_t test_size = 10;
     SystemThread_t thread[test_size];
     for (size_t i = 0; i < test_size; i++)
-        thread[i] = make_SystemThread(info);
+        thread[i] = make_SystemThread(SystemThread_test_function,
+				      &SystemThread_test_var);
     for (size_t i = 0; i < test_size; i++)
         TEST_ASSERT(system_join_thread(thread[i]));
-    free_ThreadInfo(info);
     TEST_CHECK_(SystemThread_test_var == SystemThread_test_incs * test_size, "var = %zu", SystemThread_test_var);
 }

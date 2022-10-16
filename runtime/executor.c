@@ -79,8 +79,7 @@ void run_executor_loop(void* executor0) {
 }
 
 void start_executor(struct Executor* executor) {
-  struct ThreadInfo* info = make_ThreadInfo(run_executor_loop, executor);
-  executor->thread = make_SystemThread(info);
+  executor->thread = make_SystemThread(run_executor_loop, executor);
 }
 
 void stop_executor(struct Executor* executor) {
@@ -90,6 +89,7 @@ void stop_executor(struct Executor* executor) {
 }
 
 void free_Executor(struct Executor* executor) {
+  free_ActorQueue(executor->queue);
   free_SystemLock(executor->lock);
   free(executor);
 }

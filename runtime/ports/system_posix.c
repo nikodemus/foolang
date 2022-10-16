@@ -35,13 +35,24 @@ void system_unlock(pthread_mutex_t* mutex) {
   assert(!pthread_mutex_unlock(mutex));
 }
 
+struct ThreadInfo {
+    ThreadFunction function;
+    void* parameter;
+};
+
 void* run_thread(void* data) {
   struct ThreadInfo* info = data;
-  info->function(info->parameter);
+  ThreadFunction function = info->function;
+  void* parameter = info->parameter;
+  free(info);
+  function(parameter);
   return NULL;
 }
 
-SystemThread_t make_SystemThread(struct ThreadInfo* info) {
+SystemThread_t make_SystemThread(ThreadFunction function, void* parameter) {
+  struct ThreadInfo* info = malloc(sizeof(struct ThreadInfo));
+  info->function = function;
+  info->parameter = parameter;
   pthread_t* thread = malloc(sizeof(pthread_t));
   assert(!pthread_create(thread, NULL, run_thread, info));
   return thread;

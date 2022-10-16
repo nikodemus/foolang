@@ -52,6 +52,8 @@ void test_ActorQueue_enqueue_and_dequeue(void) {
     while (dequeue_actor(queue))
         ;;
     TEST_CHECK_(queue_size(queue) == 0, "size: %zu", queue_size(queue));
+
+    free_ActorQueue(queue);
 }
 
 void test_ActorQueue_enqueue_at_capacity(void) {
@@ -141,4 +143,6 @@ void test_ActorQueue_enqueue_at_capacity(void) {
     for (intptr_t i = end; i < (intptr_t)queue->capacity; i++) {
         TEST_CHECK(i == (intptr_t)queue->actors[i]);
     }
+
+    free_ActorQueue(queue);
 }
