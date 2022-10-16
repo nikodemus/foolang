@@ -19,12 +19,21 @@ else
 endif
 
 SRCS=$(wildcard runtime/*.c)
+TEST_SRCS=$(wildcard runtime/tests/*.c)
+
 OBJS=$(SRCS:%.c=build/%.o)
+TEST_OBJS=$(TEST_SRCS:%.c=build/%.o)
+
+$(info "OBJS: $(OBJS)")
 
 $(OBJS): | build/runtime
+$(TEST_OBJS): | build/runtime/tests
 
 build/runtime:
 	@mkdir -p build/runtime
+
+build/runtime/tests:
+	@mkdir -p build/runtime/tests
 
 build/%.o : %.c Makefile
 	@echo - $@

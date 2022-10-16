@@ -1,6 +1,7 @@
 #ifndef __ACTOR_H_
 #define __ACTOR_H_
 
+#include "datum.h"
 #include "system.h"
 
 enum ActorState {
@@ -24,5 +25,6 @@ struct Actor* make_Actor(ActorContinuation entry, void* data);
 void free_Actor(struct Actor*);
 enum ActorState run_actor_timeslice(struct Actor*);
 void wait_for_actor_exit(struct Actor*, size_t);
+void print_actor(struct Actor* actor);
 
 #endif // __ACTOR_H_
