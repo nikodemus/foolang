@@ -620,7 +620,7 @@ struct FooClass foo_class_7 = {
 
 char* main_actor_exit(char* sp, struct Actor* actor) {
     datum_t res = READ_DATUM(sp, -2);
-    printf(" INFO - main actor exit: %lld\n", res);
+    printf(" INFO - main actor exit: %d\n", (int)res);
     atomic_store(&actor->state, ActorExiting);
     actor->sp = sp;
     return 0;

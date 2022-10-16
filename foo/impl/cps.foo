@@ -3061,7 +3061,7 @@ class CBackend { output declared emitted dependencies }
             ; newline
             ; print: "char* main_actor_exit(char* sp, struct Actor* actor) \{\n"
             ; print: "    datum_t res = READ_DATUM(sp, -2);\n"
-            ; print: "    printf(\" INFO - main actor exit: %lld\\n\", res);\n"
+            ; print: "    printf(\" INFO - main actor exit: %d\\n\", (int)res);\n"
             ; print: "    atomic_store(&actor->state, ActorExiting);\n"
             ; print: "    actor->sp = sp;\n"
             ; print: "    return 0;\n"

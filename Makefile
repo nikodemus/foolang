@@ -20,9 +20,9 @@ $(info Using CC = $(CC), AR = $(AR))
 CPPFLAGS = -Iruntime -Iext
 CFLAGS = -g -Wall -Wextra -fsanitize=address -fsanitize=undefined
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
-COMPILE.a = @"$(AR)" rc
-COMPILE.c = @"$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
-COMPILE.exe = @"$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS)
+BUILD.a = @"$(AR)" rc
+BUILD.o = @"$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
+BUILD.exe = @"$(CC)" $(CFLAGS) $(CPPFLAGS)
 SILENCE = | (grep -v "Creating library" || true)
 
 LOG_BUILD = @echo Building: $@
@@ -30,8 +30,10 @@ LOG_BUILD = @echo Building: $@
 ifeq ($(OS), Windows_NT)
 	EXE=.exe
 else
-	EXE=
+	EXE=.bin
 endif
+
+LIBFOO=build/libfoolang.a
 
 RUNTIME_SRCS=$(wildcard runtime/*.c)
 RUNTIME_OBJS=$(RUNTIME_SRCS:%.c=build/%.o)
@@ -66,7 +68,7 @@ $(RUNTIME_TEST_OBJS): | build/test/runtime
 BENCHMARK_SRCS=$(wildcard test/benchmark/*.c)
 BENCHMARK_OBJS=$(BENCHMARK_SRCS:%.c=build/%.o)
 BENCHMARK_EXES=$(BENCHMARK_SRCS:%.c=build/%$(EXE))
-BENCHMARK_RUNS=$(BENCHMARK_SRCS:%.c=build/%.time)
+BENCHMARK_RUNS=$(BENCHMARK_SRCS:%.c=build/%.run)
 $(BENCHMARK_OBJS): | build/test/benchmark
 
 build/runtime:
@@ -81,32 +83,27 @@ build/test/runtime:
 build/test/benchmark:
 	@mkdir -p build/test/benchmark
 
-build/foolang.a: $(RUNTIME_OBJS)
+$(LIBFOO): $(RUNTIME_OBJS)
 	$(LOG_BUILD)
-	$(COMPILE.a) $@ $(RUNTIME_OBJS)
+	$(BUILD.a) $@ $(RUNTIME_OBJS)
 
-build/test/runtime/test$(EXE): $(RUNTIME_TEST_OBJS) build/foolang.a
+build/test/runtime/test$(EXE): $(RUNTIME_TEST_OBJS) $(LIBFOO)
 	$(LOG_BUILD)
-	$(COMPILE.exe) $(OUTPUT_OPTION) $^ $(SILENCE)
+	$(BUILD.exe) -o $@ $^ $(SILENCE)
 
 .PRECIOUS: %$(EXE)
-%$(EXE): build/foolang.a %.o
+%$(EXE): %.o $(LIBFOO)
 	$(LOG_BUILD)
-	$(COMPILE.exe) $(OUTPUT_OPTION) $^ $(SILENCE)
+	$(BUILD.exe) -o $@ $^ $(SILENCE)
 
-build/%.o : %.c Makefile
+build/%.o : %.c
 	$(LOG_BUILD)
-	$(COMPILE.c) $(OUTPUT_OPTION) $<
+	$(BUILD.o) -o $@ $<
 
 .PHONY: build/%.run
 build/%.run: build/%$(EXE)
-	@echo Running: $^
+	@echo Running: $<
 	@$<
-
-.PHONY: build/%.time
-build/%.time: build/%$(EXE)
-	@echo Timing: $^
-	@bash -c "echo ' '`(time ($< &> /dev/null)) 2>&1 | grep real`"
 
 .PHONY: test-benchmark
 test-benchmark: $(BENCHMARK_RUNS)
@@ -145,7 +142,7 @@ clean: clean-c clean-rust
 
 .PHONY: clean-c
 clean-c:
-	@rm -rf build/runtime build/test build/foolang.a
+	@rm -rf build/runtime build/test build/libfoolang.a
 
 .PHONY: clean-rust
 clean-rust:
