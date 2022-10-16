@@ -20,9 +20,9 @@ $(info Using CC = $(CC), AR = $(AR))
 CPPFLAGS = -Iruntime -Iext
 CFLAGS = -g -Wall -Wextra -fsanitize=address -fsanitize=undefined
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
-COMPILE.a = "$(AR)" rc
-COMPILE.c = "$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
-COMPILE.exe = "$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS)
+COMPILE.a = @"$(AR)" rc
+COMPILE.c = @"$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
+COMPILE.exe = @"$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS)
 SILENCE = | (grep -v "Creating library" || true)
 
 LOG_BUILD = @echo Building: $@
@@ -83,20 +83,20 @@ build/test/benchmark:
 
 build/foolang.a: $(RUNTIME_OBJS)
 	$(LOG_BUILD)
-	@$(COMPILE.a) $(OUTPUT_OPTION) $(RUNTIME_OBJS)
+	$(COMPILE.a) $@ $(RUNTIME_OBJS)
 
 build/test/runtime/test$(EXE): $(RUNTIME_TEST_OBJS) build/foolang.a
 	$(LOG_BUILD)
-	@$(COMPILE.exe) $(OUTPUT_OPTION) $^ $(SILENCE)
+	$(COMPILE.exe) $(OUTPUT_OPTION) $^ $(SILENCE)
 
 .PRECIOUS: %$(EXE)
 %$(EXE): build/foolang.a %.o
 	$(LOG_BUILD)
-	@$(COMPILE.exe) $(OUTPUT_OPTION) $^ $(SILENCE)
+	$(COMPILE.exe) $(OUTPUT_OPTION) $^ $(SILENCE)
 
 build/%.o : %.c Makefile
 	$(LOG_BUILD)
-	@$(COMPILE.c) $(OUTPUT_OPTION) $<
+	$(COMPILE.c) $(OUTPUT_OPTION) $<
 
 .PHONY: build/%.run
 build/%.run: build/%$(EXE)
