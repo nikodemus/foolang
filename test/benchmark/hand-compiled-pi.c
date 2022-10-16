@@ -1,10 +1,12 @@
-#include <assert.h>
 #include <inttypes.h>
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #undef NDEBUG
+#include <assert.h>
+
+#include "pi_config.h"
 
 struct Actor {
   char* sp;
@@ -102,6 +104,7 @@ double random_double() {
 
 
 char* exit_continuation(char* sp, struct Actor* actor) {
+  (void)sp;
   (void)actor;
   exit(0);
   return NULL;
@@ -128,7 +131,7 @@ char* pi_loop_exit(char* sp, struct Actor* actor) {
   POP_POINTER(sp);
   POP_I64(sp);
   int64_t inside = POP_I64(sp);
-  double ratio = 4.0 * (double)inside / 100000000.0;
+  double ratio = 4.0 * (double)inside / N_ITERATIONS;
   ARG_F64(sp, 1) = ratio;
   return sp;
 }
@@ -158,7 +161,7 @@ char* pi_entry(char* sp, struct Actor* actor) {
   POP_I64(sp);
   PUSH_I64(sp, 0);       // inside = 0
   PUSH_I64(sp, 1);       // i = 1
-  PUSH_I64(sp, 100000000); // n = 1000 000
+  PUSH_I64(sp, N_ITERATIONS);
   PUSH_I64(sp, ARG_IMMS(2));
   PUSH_POINTER(sp, pi_loop_test);
   return sp;
@@ -168,7 +171,7 @@ char* pi_entry(char* sp, struct Actor* actor) {
 char* main_exit(char* sp, struct Actor* actor) {
   (void)actor;
   double f = ARG_F64(sp, 1);
-  printf("pi = %f\n", f);
+  printf("    pi = %f\n", f);
   POP_POINTER(sp);
   POP_I64(sp);
   POP_I64(sp);

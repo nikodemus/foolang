@@ -4482,7 +4482,7 @@ struct FooClass foo_class_1 = \{
                                       end"
                       with: [IntegerClassDefinition]
                       in: ns.
-        let expected = (system currentDirectory / "runtime/x.c")
+        let expected = (system currentDirectory / "test/c-backend/main_42.c")
                            readString.
         assert that: { CBackend emitMainToString: def in: ns }
                equals: expected!
