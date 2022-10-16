@@ -715,29 +715,30 @@ class ClassDefinition { name
 
         methods
             do: { |each| classDefinition addMethod: each }.
-        self standardInstanceMethodImpls
+        classDefinition defaultInstanceMethodImpls
             do: { |each|
                   classDefinition addMethod: (BuiltinMethod new: (each for: classDefinition)) }.
 
         directMethods
             do: { |each| ownClassDefinition addMethod: each }.
-        self standardDirectMethodImpls
+        classDefinition defaultDirectMethodImpls
             do: { |each|
                   ownClassDefinition addMethod: (BuiltinMethod new: (each for: classDefinition)) }.
 
         classDefinition!
 
 
-    direct method standardInstanceMethodImpls
+    method defaultInstanceMethodImpls
         [OpaqueIdentityImpl]!
 
 
-    direct method standardDirectMethodImpls
-        [
-            ConstructorImpl,
-            OpaqueIdentityImpl,
-            TypecheckImpl,
-            ]!
+    method defaultDirectMethodImpls
+        self isPrimitive
+            ifTrue: { [OpaqueIdentityImpl,
+                       TypecheckImpl] }
+            ifFalse: { [ConstructorImpl,
+                        OpaqueIdentityImpl,
+                        TypecheckImpl] }!
 
 
     method ownClassDefinition: new
@@ -780,7 +781,7 @@ class ClassDefinition { name
 
 
     method displayString
-        self is ClassClassDefinition
+        hostClass is Class
             ifTrue: { "#<Class>" }
             ifFalse: { "#<Class {name}>" }!
 
@@ -870,7 +871,7 @@ define ClassClassDefinition
                                methodDictionary: classMethodDictionary).
     new ownClassDefinition: new.
     classMethodDictionary home: new.
-    ClassDefinition standardDirectMethodImpls
+    new defaultDirectMethodImpls
         do: { |each| new addMethod: (BuiltinMethod new: (each for: new)) }.
     new!
 

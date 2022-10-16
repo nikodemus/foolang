@@ -152,56 +152,26 @@ struct FooBytes foo_string_26 = {
     .data = { 'B','o','o','l','e','a','n',' ','c','l','a','s','s', 0 }
 };
 
-// "new"
-struct FooBytes foo_string_29 = {
-    .size = 3,
-    .data = { 'n','e','w', 0 }
-};
-
-// #new
-struct FooSelector foo_selector_28 = {
-    .name = &foo_string_29
-};
-
-// #<BuiltinMethodImpl new>
-char* foo_builtin_30(char* sp, struct Actor* actor) {
-    char* bp = actor->bp = sp - 4 * sizeof(datum_t);
-    datum_t cont = READ_DATUM(bp, 0);
-    sp = bp;
-    PUSH_DATUM(sp, &foo_class_1);
-    PUSH_DATUM(sp, 0); // only empty classes for now!
-    PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, cont);
-    return sp;
-}
-
-// #<BuiltinMethod Boolean class#new>
-struct FooMethod foo_method_27 = {
-    .home = &foo_class_2,
-    .selector = &foo_selector_28,
-    .method_function = foo_builtin_30
-};
-
 // #<BuiltinMethod Boolean class#opaqueIdentity>
-struct FooMethod foo_method_31 = {
+struct FooMethod foo_method_27 = {
     .home = &foo_class_2,
     .selector = &foo_selector_22,
     .method_function = foo_builtin_24
 };
 
 // "typecheck:"
-struct FooBytes foo_string_34 = {
+struct FooBytes foo_string_30 = {
     .size = 10,
     .data = { 't','y','p','e','c','h','e','c','k',':', 0 }
 };
 
 // #typecheck:
-struct FooSelector foo_selector_33 = {
-    .name = &foo_string_34
+struct FooSelector foo_selector_29 = {
+    .name = &foo_string_30
 };
 
 // #<BuiltinMethodImpl typecheck:>
-char* foo_builtin_35(char* sp, struct Actor* actor) {
+char* foo_builtin_31(char* sp, struct Actor* actor) {
     char* bp = actor->bp = sp - 6 * sizeof(datum_t);
     datum_t expectedClass = READ_DATUM(bp, 1);
     datum_t actualClass = READ_DATUM(bp, 3);
@@ -220,19 +190,18 @@ char* foo_builtin_35(char* sp, struct Actor* actor) {
 }
 
 // #<BuiltinMethod Boolean class#typecheck:>
-struct FooMethod foo_method_32 = {
+struct FooMethod foo_method_28 = {
     .home = &foo_class_2,
-    .selector = &foo_selector_33,
-    .method_function = foo_builtin_35
+    .selector = &foo_selector_29,
+    .method_function = foo_builtin_31
 };
 
 // #<MethodDictionary Boolean class>
-struct FooMethodDictionary foo_methods_36 = {
-    .size = 3,
+struct FooMethodDictionary foo_methods_32 = {
+    .size = 2,
     .data = {
-        &foo_method_27, // #<BuiltinMethod Boolean class#new>
-        &foo_method_31, // #<BuiltinMethod Boolean class#opaqueIdentity>
-        &foo_method_32, // #<BuiltinMethod Boolean class#typecheck:>
+        &foo_method_27, // #<BuiltinMethod Boolean class#opaqueIdentity>
+        &foo_method_28, // #<BuiltinMethod Boolean class#typecheck:>
     }
 };
 
@@ -240,43 +209,24 @@ struct FooMethodDictionary foo_methods_36 = {
 struct FooClass foo_class_2 = {
     .name = &foo_string_26,
     .own_class = &foo_class_3,
-    .methods = &foo_methods_36
+    .methods = &foo_methods_32
 };
 
 // "Class"
-struct FooBytes foo_string_37 = {
+struct FooBytes foo_string_33 = {
     .size = 5,
     .data = { 'C','l','a','s','s', 0 }
 };
 
-// #<BuiltinMethodImpl new>
-char* foo_builtin_39(char* sp, struct Actor* actor) {
-    char* bp = actor->bp = sp - 4 * sizeof(datum_t);
-    datum_t cont = READ_DATUM(bp, 0);
-    sp = bp;
-    PUSH_DATUM(sp, &foo_class_3);
-    PUSH_DATUM(sp, 0); // only empty classes for now!
-    PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, cont);
-    return sp;
-}
-
-// #<BuiltinMethod Class#new>
-struct FooMethod foo_method_38 = {
-    .home = &foo_class_3,
-    .selector = &foo_selector_28,
-    .method_function = foo_builtin_39
-};
-
 // #<BuiltinMethod Class#opaqueIdentity>
-struct FooMethod foo_method_40 = {
+struct FooMethod foo_method_34 = {
     .home = &foo_class_3,
     .selector = &foo_selector_22,
     .method_function = foo_builtin_24
 };
 
 // #<BuiltinMethodImpl typecheck:>
-char* foo_builtin_42(char* sp, struct Actor* actor) {
+char* foo_builtin_36(char* sp, struct Actor* actor) {
     char* bp = actor->bp = sp - 6 * sizeof(datum_t);
     datum_t expectedClass = READ_DATUM(bp, 1);
     datum_t actualClass = READ_DATUM(bp, 3);
@@ -295,48 +245,47 @@ char* foo_builtin_42(char* sp, struct Actor* actor) {
 }
 
 // #<BuiltinMethod Class#typecheck:>
-struct FooMethod foo_method_41 = {
+struct FooMethod foo_method_35 = {
     .home = &foo_class_3,
-    .selector = &foo_selector_33,
-    .method_function = foo_builtin_42
+    .selector = &foo_selector_29,
+    .method_function = foo_builtin_36
 };
 
 // #<MethodDictionary Class>
-struct FooMethodDictionary foo_methods_43 = {
-    .size = 3,
+struct FooMethodDictionary foo_methods_37 = {
+    .size = 2,
     .data = {
-        &foo_method_38, // #<BuiltinMethod Class#new>
-        &foo_method_40, // #<BuiltinMethod Class#opaqueIdentity>
-        &foo_method_41, // #<BuiltinMethod Class#typecheck:>
+        &foo_method_34, // #<BuiltinMethod Class#opaqueIdentity>
+        &foo_method_35, // #<BuiltinMethod Class#typecheck:>
     }
 };
 
 // #<Class>
 struct FooClass foo_class_3 = {
-    .name = &foo_string_37,
+    .name = &foo_string_33,
     .own_class = &foo_class_3,
-    .methods = &foo_methods_43
+    .methods = &foo_methods_37
 };
 
 // "Integer"
-struct FooBytes foo_string_44 = {
+struct FooBytes foo_string_38 = {
     .size = 7,
     .data = { 'I','n','t','e','g','e','r', 0 }
 };
 
 // "+"
-struct FooBytes foo_string_47 = {
+struct FooBytes foo_string_41 = {
     .size = 1,
     .data = { '+', 0 }
 };
 
 // #+
-struct FooSelector foo_selector_46 = {
-    .name = &foo_string_47
+struct FooSelector foo_selector_40 = {
+    .name = &foo_string_41
 };
 
 // #<BuiltinMethodImpl +>
-char* foo_builtin_48(char* sp, struct Actor* actor) {
+char* foo_builtin_42(char* sp, struct Actor* actor) {
     (void)sp;
     (void)actor;
     printf("TODO: #<CpsSelector +>");
@@ -344,25 +293,25 @@ char* foo_builtin_48(char* sp, struct Actor* actor) {
 }
 
 // #<BuiltinMethod Integer#+>
-struct FooMethod foo_method_45 = {
+struct FooMethod foo_method_39 = {
     .home = &foo_class_4,
-    .selector = &foo_selector_46,
-    .method_function = foo_builtin_48
+    .selector = &foo_selector_40,
+    .method_function = foo_builtin_42
 };
 
 // "addInteger:"
-struct FooBytes foo_string_51 = {
+struct FooBytes foo_string_45 = {
     .size = 11,
     .data = { 'a','d','d','I','n','t','e','g','e','r',':', 0 }
 };
 
 // #addInteger:
-struct FooSelector foo_selector_50 = {
-    .name = &foo_string_51
+struct FooSelector foo_selector_44 = {
+    .name = &foo_string_45
 };
 
 // #<BuiltinMethodImpl addInteger:>
-char* foo_builtin_52(char* sp, struct Actor* actor) {
+char* foo_builtin_46(char* sp, struct Actor* actor) {
     (void)sp;
     (void)actor;
     printf("TODO: #<CpsSelector addInteger:>");
@@ -370,70 +319,51 @@ char* foo_builtin_52(char* sp, struct Actor* actor) {
 }
 
 // #<BuiltinMethod Integer#addInteger:>
-struct FooMethod foo_method_49 = {
+struct FooMethod foo_method_43 = {
     .home = &foo_class_4,
-    .selector = &foo_selector_50,
-    .method_function = foo_builtin_52
+    .selector = &foo_selector_44,
+    .method_function = foo_builtin_46
 };
 
 // #<BuiltinMethod Integer#opaqueIdentity>
-struct FooMethod foo_method_53 = {
+struct FooMethod foo_method_47 = {
     .home = &foo_class_4,
     .selector = &foo_selector_22,
     .method_function = foo_builtin_24
 };
 
 // #<MethodDictionary Integer>
-struct FooMethodDictionary foo_methods_54 = {
+struct FooMethodDictionary foo_methods_48 = {
     .size = 3,
     .data = {
-        &foo_method_45, // #<BuiltinMethod Integer#+>
-        &foo_method_49, // #<BuiltinMethod Integer#addInteger:>
-        &foo_method_53, // #<BuiltinMethod Integer#opaqueIdentity>
+        &foo_method_39, // #<BuiltinMethod Integer#+>
+        &foo_method_43, // #<BuiltinMethod Integer#addInteger:>
+        &foo_method_47, // #<BuiltinMethod Integer#opaqueIdentity>
     }
 };
 
 // #<Class Integer>
 struct FooClass foo_class_4 = {
-    .name = &foo_string_44,
+    .name = &foo_string_38,
     .own_class = &foo_class_5,
-    .methods = &foo_methods_54
+    .methods = &foo_methods_48
 };
 
 // "Integer class"
-struct FooBytes foo_string_55 = {
+struct FooBytes foo_string_49 = {
     .size = 13,
     .data = { 'I','n','t','e','g','e','r',' ','c','l','a','s','s', 0 }
 };
 
-// #<BuiltinMethodImpl new>
-char* foo_builtin_57(char* sp, struct Actor* actor) {
-    char* bp = actor->bp = sp - 4 * sizeof(datum_t);
-    datum_t cont = READ_DATUM(bp, 0);
-    sp = bp;
-    PUSH_DATUM(sp, &foo_class_4);
-    PUSH_DATUM(sp, 0); // only empty classes for now!
-    PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, cont);
-    return sp;
-}
-
-// #<BuiltinMethod Integer class#new>
-struct FooMethod foo_method_56 = {
-    .home = &foo_class_5,
-    .selector = &foo_selector_28,
-    .method_function = foo_builtin_57
-};
-
 // #<BuiltinMethod Integer class#opaqueIdentity>
-struct FooMethod foo_method_58 = {
+struct FooMethod foo_method_50 = {
     .home = &foo_class_5,
     .selector = &foo_selector_22,
     .method_function = foo_builtin_24
 };
 
 // #<BuiltinMethodImpl typecheck:>
-char* foo_builtin_60(char* sp, struct Actor* actor) {
+char* foo_builtin_52(char* sp, struct Actor* actor) {
     char* bp = actor->bp = sp - 6 * sizeof(datum_t);
     datum_t expectedClass = READ_DATUM(bp, 1);
     datum_t actualClass = READ_DATUM(bp, 3);
@@ -452,55 +382,54 @@ char* foo_builtin_60(char* sp, struct Actor* actor) {
 }
 
 // #<BuiltinMethod Integer class#typecheck:>
-struct FooMethod foo_method_59 = {
+struct FooMethod foo_method_51 = {
     .home = &foo_class_5,
-    .selector = &foo_selector_33,
-    .method_function = foo_builtin_60
+    .selector = &foo_selector_29,
+    .method_function = foo_builtin_52
 };
 
 // #<MethodDictionary Integer class>
-struct FooMethodDictionary foo_methods_61 = {
-    .size = 3,
+struct FooMethodDictionary foo_methods_53 = {
+    .size = 2,
     .data = {
-        &foo_method_56, // #<BuiltinMethod Integer class#new>
-        &foo_method_58, // #<BuiltinMethod Integer class#opaqueIdentity>
-        &foo_method_59, // #<BuiltinMethod Integer class#typecheck:>
+        &foo_method_50, // #<BuiltinMethod Integer class#opaqueIdentity>
+        &foo_method_51, // #<BuiltinMethod Integer class#typecheck:>
     }
 };
 
 // #<Class Integer class>
 struct FooClass foo_class_5 = {
-    .name = &foo_string_55,
+    .name = &foo_string_49,
     .own_class = &foo_class_3,
-    .methods = &foo_methods_61
+    .methods = &foo_methods_53
 };
 
 // "Main"
-struct FooBytes foo_string_62 = {
+struct FooBytes foo_string_54 = {
     .size = 4,
     .data = { 'M','a','i','n', 0 }
 };
 
 // #<BuiltinMethod Main#opaqueIdentity>
-struct FooMethod foo_method_63 = {
+struct FooMethod foo_method_55 = {
     .home = &foo_class_6,
     .selector = &foo_selector_22,
     .method_function = foo_builtin_24
 };
 
 // "run:in:"
-struct FooBytes foo_string_66 = {
+struct FooBytes foo_string_58 = {
     .size = 7,
     .data = { 'r','u','n',':','i','n',':', 0 }
 };
 
 // #run:in:
-struct FooSelector foo_selector_65 = {
-    .name = &foo_string_66
+struct FooSelector foo_selector_57 = {
+    .name = &foo_string_58
 };
 
 // #<CpsGraph Main#run:in:>
-char* foo_method_function_67(char* sp, struct Actor* actor) {
+char* foo_method_function_59(char* sp, struct Actor* actor) {
     // 0 - $return
     // 1 - $receiver class
     // 2 - $receiver datum
@@ -521,36 +450,47 @@ char* foo_method_function_67(char* sp, struct Actor* actor) {
 }
 
 // #<UserMethod Main#run:in:>
-struct FooMethod foo_method_64 = {
+struct FooMethod foo_method_56 = {
     .home = &foo_class_6,
-    .selector = &foo_selector_65,
-    .method_function = foo_method_function_67
+    .selector = &foo_selector_57,
+    .method_function = foo_method_function_59
 };
 
 // #<MethodDictionary Main>
-struct FooMethodDictionary foo_methods_68 = {
+struct FooMethodDictionary foo_methods_60 = {
     .size = 2,
     .data = {
-        &foo_method_63, // #<BuiltinMethod Main#opaqueIdentity>
-        &foo_method_64, // #<UserMethod Main#run:in:>
+        &foo_method_55, // #<BuiltinMethod Main#opaqueIdentity>
+        &foo_method_56, // #<UserMethod Main#run:in:>
     }
 };
 
 // #<Class Main>
 struct FooClass foo_class_6 = {
-    .name = &foo_string_62,
+    .name = &foo_string_54,
     .own_class = &foo_class_7,
-    .methods = &foo_methods_68
+    .methods = &foo_methods_60
 };
 
 // "Main class"
-struct FooBytes foo_string_69 = {
+struct FooBytes foo_string_61 = {
     .size = 10,
     .data = { 'M','a','i','n',' ','c','l','a','s','s', 0 }
 };
 
+// "new"
+struct FooBytes foo_string_64 = {
+    .size = 3,
+    .data = { 'n','e','w', 0 }
+};
+
+// #new
+struct FooSelector foo_selector_63 = {
+    .name = &foo_string_64
+};
+
 // #<BuiltinMethodImpl new>
-char* foo_builtin_71(char* sp, struct Actor* actor) {
+char* foo_builtin_65(char* sp, struct Actor* actor) {
     char* bp = actor->bp = sp - 4 * sizeof(datum_t);
     datum_t cont = READ_DATUM(bp, 0);
     sp = bp;
@@ -562,21 +502,21 @@ char* foo_builtin_71(char* sp, struct Actor* actor) {
 }
 
 // #<BuiltinMethod Main class#new>
-struct FooMethod foo_method_70 = {
+struct FooMethod foo_method_62 = {
     .home = &foo_class_7,
-    .selector = &foo_selector_28,
-    .method_function = foo_builtin_71
+    .selector = &foo_selector_63,
+    .method_function = foo_builtin_65
 };
 
 // #<BuiltinMethod Main class#opaqueIdentity>
-struct FooMethod foo_method_72 = {
+struct FooMethod foo_method_66 = {
     .home = &foo_class_7,
     .selector = &foo_selector_22,
     .method_function = foo_builtin_24
 };
 
 // #<BuiltinMethodImpl typecheck:>
-char* foo_builtin_74(char* sp, struct Actor* actor) {
+char* foo_builtin_68(char* sp, struct Actor* actor) {
     char* bp = actor->bp = sp - 6 * sizeof(datum_t);
     datum_t expectedClass = READ_DATUM(bp, 1);
     datum_t actualClass = READ_DATUM(bp, 3);
@@ -595,27 +535,27 @@ char* foo_builtin_74(char* sp, struct Actor* actor) {
 }
 
 // #<BuiltinMethod Main class#typecheck:>
-struct FooMethod foo_method_73 = {
+struct FooMethod foo_method_67 = {
     .home = &foo_class_7,
-    .selector = &foo_selector_33,
-    .method_function = foo_builtin_74
+    .selector = &foo_selector_29,
+    .method_function = foo_builtin_68
 };
 
 // #<MethodDictionary Main class>
-struct FooMethodDictionary foo_methods_75 = {
+struct FooMethodDictionary foo_methods_69 = {
     .size = 3,
     .data = {
-        &foo_method_70, // #<BuiltinMethod Main class#new>
-        &foo_method_72, // #<BuiltinMethod Main class#opaqueIdentity>
-        &foo_method_73, // #<BuiltinMethod Main class#typecheck:>
+        &foo_method_62, // #<BuiltinMethod Main class#new>
+        &foo_method_66, // #<BuiltinMethod Main class#opaqueIdentity>
+        &foo_method_67, // #<BuiltinMethod Main class#typecheck:>
     }
 };
 
 // #<Class Main class>
 struct FooClass foo_class_7 = {
-    .name = &foo_string_69,
+    .name = &foo_string_61,
     .own_class = &foo_class_3,
-    .methods = &foo_methods_75
+    .methods = &foo_methods_69
 };
 
 char* main_actor_exit(char* sp, struct Actor* actor) {
@@ -636,7 +576,7 @@ char* main_actor_entry(char* sp, struct Actor* actor) {
     PUSH_DATUM(sp, 0); // FIXME System
     PUSH_DATUM(sp, 0); // FIXME    system datum
     PUSH_DATUM(sp, IMMS(1) | OBJS(3));
-    PUSH_DATUM(sp, foo_method_function_67);
+    PUSH_DATUM(sp, foo_method_function_59);
     return sp;
 }
 
