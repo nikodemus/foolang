@@ -237,6 +237,16 @@ jobs:
       - name: Test CPS
         run: ./bin/bootstrap-interpreter foo/impl/cps.foo --use=foo/lib
 
+  test-runtime:
+    name: "Test Runtime"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v2
+
       - name: Test Runtime
         run: make test-runtime
 
