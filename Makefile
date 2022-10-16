@@ -12,7 +12,7 @@ CC := $(shell bash ./find-clang.sh cc)
 AR := $(shell bash ./find-clang.sh ar)
 
 ifeq ($(CC), "")
-	$(error Could not clang versions for CC and AR!)
+	$(error Could not find matching clang versions for CC and AR!)
 endif
 
 $(info Using CC = $(CC), AR = $(AR))
@@ -20,9 +20,9 @@ $(info Using CC = $(CC), AR = $(AR))
 CPPFLAGS = -Iruntime -Iext
 CFLAGS = -g -Wall -Wextra -fsanitize=address -fsanitize=undefined
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
-BUILD.a = @"$(AR)" rc
-BUILD.o = @"$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
-BUILD.exe = @"$(CC)" $(CFLAGS) $(CPPFLAGS)
+BUILD.a = @$(AR) rc
+BUILD.o = @$(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
+BUILD.exe = @$(CC) $(CFLAGS) $(CPPFLAGS)
 SILENCE = | (grep -v "Creating library" || true)
 
 LOG_BUILD = @echo Building: $@
