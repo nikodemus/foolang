@@ -1,0 +1,16 @@
+class Main {}
+    direct method run: command in: system
+        let random = Random new: system random integer.
+        system output println: "PI = {Calc pi: random}"!
+end
+
+class Calc {}
+    direct method pi: random
+        let inside = 0.
+        let n = 1_000_000.
+        n times: { let x = random float square.
+                   let y = random float square.
+                   x + y < 1.0
+                       ifTrue: { inside = inside + 1 } }.
+        4.0 * inside / n!
+end

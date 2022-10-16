@@ -12,7 +12,7 @@ CC := $(shell bash ./find-clang.sh cc)
 AR := $(shell bash ./find-clang.sh ar)
 
 ifeq ($(CC), "")
-	$(error Could not clang versions for CC and AR!)
+	$(error Could not find matching clang versions for CC and AR!)
 endif
 
 $(info Using CC = $(CC), AR = $(AR))
@@ -20,9 +20,9 @@ $(info Using CC = $(CC), AR = $(AR))
 CPPFLAGS = -Iruntime -Iext
 CFLAGS = -g -Wall -Wextra -fsanitize=address -fsanitize=undefined
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
-BUILD.a = @"$(AR)" rc
-BUILD.o = @"$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
-BUILD.exe = @"$(CC)" $(CFLAGS) $(CPPFLAGS)
+BUILD.a = @$(AR) rc
+BUILD.o = @$(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
+BUILD.exe = @$(CC) $(CFLAGS) $(CPPFLAGS)
 SILENCE = | (grep -v "Creating library" || true)
 
 LOG_BUILD = @echo Building: $@
@@ -40,7 +40,7 @@ RUNTIME_OBJS=$(RUNTIME_SRCS:%.c=build/%.o)
 RUNTIME_DEPFILES=$(RUNTIME_SRCS:%.c=build/%.d)
 $(RUNTIME_OBJS): | build/runtime
 
-# Files under test/c-backend/ are code emitted by
+# Files under tests/c-backend/ are code emitted by
 # the C-backend.
 #
 # Emission tests check that we get the source we expect
@@ -49,45 +49,45 @@ $(RUNTIME_OBJS): | build/runtime
 # Run tests compile and run the saved files. This means
 # re-running tests doesn't need to rebuild all tests unless
 # the expected source (or runtime!) has changed.
-C_BACKEND_TEST_SRCS=$(wildcard test/c-backend/*.c)
+C_BACKEND_TEST_SRCS=$(wildcard tests/c-backend/*.c)
 C_BACKEND_TEST_OBJS=$(C_BACKEND_TEST_SRCS:%.c=build/%.o)
 C_BACKEND_TEST_EXES=$(C_BACKEND_TEST_SRCS:%.c=build/%$(EXE))
 C_BACKEND_TEST_RUNS=$(C_BACKEND_TEST_SRCS:%.c=build/%.run)
-$(C_BACKEND_TEST_OBJS): | build/test/c-backend
+$(C_BACKEND_TEST_OBJS): | build/tests/c-backend
 
-# Files under test/runtime are unit tests for runtime.
-RUNTIME_TEST_SRCS=$(wildcard test/runtime/*.c)
+# Files under tests/runtime are unit tests for runtime.
+RUNTIME_TEST_SRCS=$(wildcard tests/runtime/*.c)
 RUNTIME_TEST_OBJS=$(RUNTIME_TEST_SRCS:%.c=build/%.o)
-$(RUNTIME_TEST_OBJS): | build/test/runtime
+$(RUNTIME_TEST_OBJS): | build/tests/runtime
 
-# Files under test/bench are benchmark-like tests.
+# Files under tests/bench are benchmark-like tests.
 # Currently a hand-compiled version of pi.foo, and
 # same expressed in "natural" C.
 #
 # Currently just run, not timed.
-BENCHMARK_SRCS=$(wildcard test/benchmark/*.c)
+BENCHMARK_SRCS=$(wildcard tests/benchmark/*.c)
 BENCHMARK_OBJS=$(BENCHMARK_SRCS:%.c=build/%.o)
 BENCHMARK_EXES=$(BENCHMARK_SRCS:%.c=build/%$(EXE))
 BENCHMARK_RUNS=$(BENCHMARK_SRCS:%.c=build/%.run)
-$(BENCHMARK_OBJS): | build/test/benchmark
+$(BENCHMARK_OBJS): | build/tests/benchmark
 
 build/runtime:
 	@mkdir -p build/runtime
 
-build/test/c-backend:
-	@mkdir -p build/test/c-backend
+build/tests/c-backend:
+	@mkdir -p build/tests/c-backend
 
-build/test/runtime:
-	@mkdir -p build/test/runtime
+build/tests/runtime:
+	@mkdir -p build/tests/runtime
 
-build/test/benchmark:
-	@mkdir -p build/test/benchmark
+build/tests/benchmark:
+	@mkdir -p build/tests/benchmark
 
 $(LIBFOO): $(RUNTIME_OBJS)
 	$(LOG_BUILD)
 	$(BUILD.a) $@ $(RUNTIME_OBJS)
 
-build/test/runtime/test$(EXE): $(RUNTIME_TEST_OBJS) $(LIBFOO)
+build/tests/runtime/test$(EXE): $(RUNTIME_TEST_OBJS) $(LIBFOO)
 	$(LOG_BUILD)
 	$(BUILD.exe) -o $@ $^ $(SILENCE)
 
@@ -112,7 +112,7 @@ test-benchmark: $(BENCHMARK_RUNS)
 test-c-backend: $(C_BACKEND_TEST_RUNS)
 
 .PHONY: test-runtime
-test-runtime: build/test/runtime/test.run
+test-runtime: build/tests/runtime/test.run
 
 .PHONY: test-cps
 test-cps:

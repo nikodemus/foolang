@@ -18,6 +18,8 @@ for v in "" -14 -13 -12 -11 -10 -9 -8 -7 -6; do
     ar=$(which llvm-ar$v || echo)
     [ -n "$cc" ] || continue
     [ -n "$ar" ] || continue
+    cc=clang$v
+    ar=llvm-ar$v
     echo ${!output}
     exit 0
 done

@@ -34,7 +34,8 @@ class TestFilePath { assert dir none file }
                testing: "FilePath#truncateExisting (without)".
         tmpfile forWrite truncateExisting
             open: { |f| f print: "XXXXX" }.
-        assert true: { tmpfile readString == "XXXXX" }!
+        assert true: { tmpfile readString == "XXXXX" }.
+        tmpfile deleteFile!
 
     method testDeleteFile
         let tmpfile = dir / "FilePath-testDeleteFile.tmp".
