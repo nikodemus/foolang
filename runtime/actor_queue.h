@@ -16,6 +16,7 @@ struct ActorQueue {
 };
 
 struct ActorQueue* make_ActorQueue();
+void free_ActorQueue(struct ActorQueue* queue);
 void enqueue_actor(struct ActorQueue* queue, struct Actor* actor);
 struct Actor* dequeue_actor(struct ActorQueue* queue);
 size_t queue_size(struct ActorQueue* queue);

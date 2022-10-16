@@ -1,13 +1,13 @@
 #define TEST_NO_MAIN
 #define _CRT_SECURE_NO_WARNINGS 1
 
-#include "foo.h"
-#include "ext/acutest.h"
+#include "foolang.h"
+#include "acutest/acutest.h"
 
 #include <stdatomic.h>
 #include <stdio.h>
 
-void test_make_executor_pool(void) {
+void test_ExecutorPool_make_executor_pool(void) {
   const size_t n = 17;
   struct ExecutorPool* pool = make_ExecutorPool(n);
   TEST_ASSERT(pool->size == n);
@@ -24,7 +24,7 @@ struct TestData {
   int state;
 };
 
-char* test_actor_entry(char* sp, struct Actor* actor) {
+char* actor_entry_for_test(char* sp, struct Actor* actor) {
   (void)sp;
   struct TestData* data = actor->data;
   system_lock(data->lock);
@@ -37,7 +37,7 @@ char* test_actor_entry(char* sp, struct Actor* actor) {
   return NULL;
 }
 
-void test_executors_run(void) {
+void test_ExecutorPool_executors_run(void) {
   const size_t n = 2;
   struct ExecutorPool* pool = make_ExecutorPool(n);
   // start_pool(pool);
@@ -52,7 +52,7 @@ void test_executors_run(void) {
     .state = 0
   };
   system_lock(data.lock);
-  struct Actor* actor = make_Actor(test_actor_entry, &data);
+  struct Actor* actor = make_Actor(actor_entry_for_test, &data);
   enqueue_actor(pool->executors[0]->queue, actor);
   system_sleep_ms(1);
   TEST_CHECK(data.state == 0);
@@ -64,9 +64,4 @@ void test_executors_run(void) {
   free_SystemLock(data.lock);
   stop_pool(pool);
   free_ExecutorPool(pool);
-}
-
-void test_ExecutorPool(void) {
-  test_make_executor_pool();
-  test_executors_run();
 }

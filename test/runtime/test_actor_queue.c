@@ -1,12 +1,12 @@
 #define TEST_NO_MAIN
 #define _CRT_SECURE_NO_WARNINGS 1
 
-#include "foo.h"
-#include "ext/acutest.h"
+#include "foolang.h"
+#include "acutest/acutest.h"
 
 #include <stdio.h>
 
-void test_enqueue_and_dequeue() {
+void test_ActorQueue_enqueue_and_dequeue(void) {
     struct ActorQueue* queue = make_ActorQueue();
     // Initialize a test set of 1024 actors.
     const size_t test_size = 210;
@@ -52,9 +52,11 @@ void test_enqueue_and_dequeue() {
     while (dequeue_actor(queue))
         ;;
     TEST_CHECK_(queue_size(queue) == 0, "size: %zu", queue_size(queue));
+
+    free_ActorQueue(queue);
 }
 
-void test_enqueue_at_capacity() {
+void test_ActorQueue_enqueue_at_capacity(void) {
     // Setup and sanity check.
     struct ActorQueue* queue = make_ActorQueue();
     intptr_t n = (intptr_t)queue->capacity;
@@ -141,9 +143,6 @@ void test_enqueue_at_capacity() {
     for (intptr_t i = end; i < (intptr_t)queue->capacity; i++) {
         TEST_CHECK(i == (intptr_t)queue->actors[i]);
     }
-}
 
-void test_ActorQueue() {
-  test_enqueue_and_dequeue();
-  test_enqueue_at_capacity();
+    free_ActorQueue(queue);
 }

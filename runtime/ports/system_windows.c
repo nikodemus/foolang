@@ -1,20 +1,19 @@
-#include "system.h"
+#include "system_windows.h"
 
 #include "config.h"
-#include "thread_info.h"
 #include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sysinfoapi.h>
 
-size_t system_number_of_cpu_cores() {
+size_t system_number_of_cpu_cores(void) {
     SYSTEM_INFO system_info;
     GetSystemInfo(&system_info);
     return (size_t)system_info.dwNumberOfProcessors;
 }
 
-SystemLock_t make_SystemLock() {
+SystemLock_t make_SystemLock(void) {
     CRITICAL_SECTION* critical_section = malloc(sizeof(CRITICAL_SECTION));
     if (!critical_section) {
         fatal("Coult no allocate memory for a system lock.");
@@ -37,15 +36,26 @@ void system_unlock(SystemLock_t lock) {
     LeaveCriticalSection(lock);
 }
 
+struct ThreadInfo {
+    ThreadFunction function;
+    void* parameter;
+};
+
 DWORD WINAPI run_thread(void* data) {
     struct ThreadInfo* info = data;
-    info->function(info->parameter);
+    ThreadFunction function = info->function;
+    void* parameter = info->parameter;
+    free(info);
+    function(parameter);
     return 0;
 }
 
 typedef LPTHREAD_START_ROUTINE SystemThreadFunction_t;
 
-SystemThread_t make_SystemThread(struct ThreadInfo* info) {
+SystemThread_t make_SystemThread(ThreadFunction function, void* parameter) {
+    struct ThreadInfo* info = malloc(sizeof(struct ThreadInfo));
+    info->function = function;
+    info->parameter = parameter;
     return CreateThread(NULL,  // cannot be inherited by child processes
                         0,     // default stack size
                         run_thread,
@@ -55,7 +65,12 @@ SystemThread_t make_SystemThread(struct ThreadInfo* info) {
 }
 
 bool system_join_thread(SystemThread_t thread) {
-    return (WAIT_OBJECT_0 == WaitForSingleObject(thread, INFINITE));
+  if (WAIT_OBJECT_0 == WaitForSingleObject(thread, INFINITE)) {
+    CloseHandle(thread);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void system_sleep_ms(size_t ms) {

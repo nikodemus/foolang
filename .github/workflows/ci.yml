@@ -237,6 +237,25 @@ jobs:
       - name: Test CPS
         run: ./bin/bootstrap-interpreter foo/impl/cps.foo --use=foo/lib
 
+  test-runtime:
+    name: "Test Runtime"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Test Runtime
+        run: make test-runtime
+
+      - name: Test C Backend
+        run: make test-c-backend
+
+      - name: Test Benchmark
+        run: make test-benchmark
+
   test-full-bootstrap:
     # Not running this on Windows because the linker clang uses
     # there doesn't accept either VS style nor GNU style stack-
