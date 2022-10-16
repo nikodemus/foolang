@@ -2,16 +2,18 @@
 #define __SYSTEM_H_
 
 #ifdef _WIN32
-#include "system_windows.h"
+#include "ports/system_windows.h"
+#else
+#include "ports/system_posix.h"
 #endif
 
 #include "thread_info.h"
 
 #include <stdbool.h>
 
-size_t system_number_of_cpu_cores();
+size_t system_number_of_cpu_cores(void);
 
-SystemLock_t make_SystemLock();
+SystemLock_t make_SystemLock(void);
 void free_SystemLock(SystemLock_t);
 void system_lock(SystemLock_t);
 void system_unlock(SystemLock_t);

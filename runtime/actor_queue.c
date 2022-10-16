@@ -61,7 +61,7 @@ void enqueue_actor(struct ActorQueue* queue, struct Actor* actor) {
   // Case 3: wraparound.
   goto enqueue;
 
- grow:
+ grow:;
   // Allocate new memory.
   size_t new_capacity = minz(queue->capacity * 2, queue->capacity + 1024);
   struct Actor** new_actors = malloc( sizeof(struct Actor*) * new_capacity);
@@ -90,7 +90,7 @@ void enqueue_actor(struct ActorQueue* queue, struct Actor* actor) {
   queue->actors = new_actors;
   // Fallthrough to enqueue!
 
- enqueue:
+ enqueue:;
     queue->actors[queue->end++] = actor;
     queue->size++;
     assert(queue->start < queue->capacity);

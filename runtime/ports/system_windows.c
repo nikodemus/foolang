@@ -1,4 +1,4 @@
-#include "system.h"
+#include "system_windows.h"
 
 #include "config.h"
 #include "thread_info.h"
@@ -8,13 +8,13 @@
 #include <stdlib.h>
 #include <sysinfoapi.h>
 
-size_t system_number_of_cpu_cores() {
+size_t system_number_of_cpu_cores(void) {
     SYSTEM_INFO system_info;
     GetSystemInfo(&system_info);
     return (size_t)system_info.dwNumberOfProcessors;
 }
 
-SystemLock_t make_SystemLock() {
+SystemLock_t make_SystemLock(void) {
     CRITICAL_SECTION* critical_section = malloc(sizeof(CRITICAL_SECTION));
     if (!critical_section) {
         fatal("Coult no allocate memory for a system lock.");
@@ -55,7 +55,12 @@ SystemThread_t make_SystemThread(struct ThreadInfo* info) {
 }
 
 bool system_join_thread(SystemThread_t thread) {
-    return (WAIT_OBJECT_0 == WaitForSingleObject(thread, INFINITE));
+  if (WAIT_OBJECT_0 == WaitForSingleObject(thread, INFINITE)) {
+    CloseHandle(thread);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void system_sleep_ms(size_t ms) {
