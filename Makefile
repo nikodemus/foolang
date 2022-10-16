@@ -20,9 +20,9 @@ $(info Using CC = $(CC), AR = $(AR))
 CPPFLAGS = -Iruntime -Iext
 CFLAGS = -g -Wall -Wextra -fsanitize=address -fsanitize=undefined
 DEPFLAGS = -MT $@ -MMD -MP -MF build/$*.d
-COMPILE.a = $(AR) rc
-COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
-COMPILE.exe = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS)
+COMPILE.a = "$(AR)" rc
+COMPILE.c = "$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c
+COMPILE.exe = "$(CC)" $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS)
 SILENCE = | (grep -v "Creating library" || true)
 
 LOG_BUILD = @echo Building: $@
