@@ -1686,6 +1686,33 @@ class IS_EQ {}
 
     direct method visit: operation by: visitor
         visitor visitIsEq: operation!
+
+    direct method simplify: op in: graph with: worklist
+        op isConstant
+            ifTrue: { return self simplifyIfConstant: op in: graph with: worklist }.
+        -- 1. Unknown types involved, cannot simplify.
+        Log println: "XXX types of: {op args collect: #toString}".
+        let types = op args collect: #type.
+        (types allSatisfy: { |each| ClassDefinition includes: each })
+            ifFalse: { return False }.
+        -- 2. Divergent types, always false.
+        types first is types second
+          ifFalse: { let const = graph ensureConstant: FalseDefinition.
+                     return op replaceUsesWith: const in: worklist }.
+        -- 3. Any MAKE_INSTANCEs in arguments can be simplified to
+        -- their datums.
+        let simplified = False.
+        let newArgs = op args collect: { |each|
+                                         each isOperation
+                                             ifTrue: { each kind is MAKE_INSTANCE
+                                                           ifTrue: { simplified = True.
+                                                                     each args second }
+                                                           ifFalse: { each  }}
+                                             ifFalse: { each }}.
+        simplified
+            ifTrue: { Log println: "SIMPLIFIED IS: {op args collect: #toString} --> {newArgs collect: #toString}".
+                      let newOp = graph ensureOperation: IS_EQ args: newArgs.
+                      return op replaceUsesWith: newOp in: worklist }!
 end
 
 
