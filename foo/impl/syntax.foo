@@ -590,6 +590,9 @@ class SyntaxIs { left right }
 
     method parts
         [left, right]!
+
+    method descriptor
+        "{left} is {right}"!
 end
 
 class SyntaxLet { variable value body }

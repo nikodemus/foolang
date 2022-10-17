@@ -1501,6 +1501,17 @@ class DATUM_OF {}
 end
 
 
+class IS_EQ {}
+    is OperationKind
+
+    direct method name
+        "isEq"!
+
+    direct method visit: operation by: visitor
+        visitor visitIsEq: operation!
+end
+
+
 class FIND_METHOD {}
     is OperationKind
 
@@ -1509,7 +1520,8 @@ class FIND_METHOD {}
 
 
     direct method apply: args
-        args first findMethod: args second!
+        args first findMethod: args second
+                   ifNone: { Error raise: "Method not found: {args first}#{args second name}" }!
 
 
     direct method visit: operation by: visitor
@@ -2529,6 +2541,27 @@ class CpsConverter { graph var next classMap namespace }
               params: []
               target: cc
               args: [graph receiver]!
+
+
+    method visitIs: anIs with: cc
+        let left = graph makeVariable: "$left".
+        let right = graph makeVariable: "$right".
+        let isOperation = graph ensureOperation: IS_EQ
+                                args: [left, right].
+        let isComparison = graph continuation: "$is"
+                                 params: []
+                                 target: cc
+                                 args: [isOperation].
+        let bindRight = graph continuation: "$bind_right"
+                              params: [right]
+                              target: isComparison
+                              args: [].
+        let valueRight = anIs right visitBy: self with: bindRight.
+        let bindLeft = graph continuation: "$bind_left"
+                             params: [left]
+                             target: valueRight
+                             args: [].
+        anIs left visitBy: self with: bindLeft!
 
 
     method visitSend: syntax with: cc
