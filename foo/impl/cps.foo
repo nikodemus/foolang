@@ -3987,7 +3987,7 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
         let actualClass = (stackmap at: aVar) classSlot.
         let expectedClass = (backend declare: aVar type) name.
         backend output
-            ; print: "    if (READ_DATUM(bp, {actualClass}) != &{expectedClass}) // "
+            ; print: "    if (READ_DATUM(bp, {actualClass}) != (datum_t)&{expectedClass}) // "
             ; print: aVar name
             ; print: " :: "
             ; print: aVar type name
