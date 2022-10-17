@@ -212,6 +212,9 @@ class UserMethod { selector home cps }
     method inlineIn: aCont in: graph with: worklist
         cps is False
             ifTrue: { return False }.
+        -- Prevent self-inlining.
+        cps is graph
+            ifTrue: { return False }.
         let cc = aCont target target.
         aCont target: (CpsCopier copy: cps entry to: graph).
         aCont prependArgs: [cc].
