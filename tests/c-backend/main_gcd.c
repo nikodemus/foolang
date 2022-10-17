@@ -12,12 +12,6 @@ struct FooClass foo_class_5;
 struct FooClass foo_class_6;
 struct FooClass foo_class_7;
 
-char* foo_continuation_80(char*, struct Actor*);
-char* foo_continuation_83(char*, struct Actor*);
-char* foo_continuation_85(char*, struct Actor*);
-char* foo_continuation_86(char*, struct Actor*);
-char* foo_continuation_90(char*, struct Actor*);
-
 // "Boolean"
 struct FooBytes foo_string_8 = {
     .size = 7,
@@ -589,6 +583,19 @@ struct FooSelector foo_selector_80 = {
     .name = &foo_string_81
 };
 
+char* foo_method_function_82(char*, struct Actor*);
+char* foo_continuation_83(char*, struct Actor*);
+char* foo_continuation_84(char*, struct Actor*);
+char* foo_continuation_85(char*, struct Actor*);
+char* foo_continuation_86(char*, struct Actor*);
+char* foo_continuation_87(char*, struct Actor*);
+char* foo_continuation_88(char*, struct Actor*);
+char* foo_continuation_89(char*, struct Actor*);
+char* foo_continuation_90(char*, struct Actor*);
+char* foo_continuation_91(char*, struct Actor*);
+char* foo_continuation_92(char*, struct Actor*);
+char* foo_continuation_93(char*, struct Actor*);
+
 // #<CpsGraph Main#gcd:of:>
 char* foo_method_function_82(char* sp, struct Actor* actor) {
     // 0 - $return
@@ -612,7 +619,13 @@ char* foo_method_function_82(char* sp, struct Actor* actor) {
     // 17 - $ret datum
     // 18 - $ret class
     // 19 - $ret datum
-    // 20 - layout word
+    // 20 - $ret class
+    // 21 - $ret datum
+    // 22 - $ret class
+    // 23 - $ret datum
+    // 24 - $ignore class
+    // 25 - $ignore datum
+    // 26 - layout word
     char* bp = actor->bp = sp - 8 * sizeof(datum_t);
     if (READ_DATUM(bp, 3) != (datum_t)&foo_class_4) // a :: Integer
         return runtime_type_error(sp, actor);
@@ -630,43 +643,44 @@ char* foo_method_function_82(char* sp, struct Actor* actor) {
     PUSH_DATUM(sp, 0);
     PUSH_DATUM(sp, 0);
     PUSH_DATUM(sp, 0);
-    PUSH_DATUM(sp, OBJS(6));
-    PUSH_DATUM(sp, foo_continuation_83);
-    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(9));
+    datum_t c3 = READ_DATUM(bp, 3);
+    datum_t d4 = READ_DATUM(bp, 4);
+    PUSH_DATUM(sp, foo_continuation_85);
+    PUSH_DATUM(sp, IMMS(1));
     if (((int64_t)READ_DATUM(bp, 4) == (int64_t)0)) {
-        PUSH_DATUM(sp, foo_continuation_85);
-    } else {
         PUSH_DATUM(sp, foo_continuation_86);
+    } else {
+        PUSH_DATUM(sp, foo_continuation_87);
     }
     return sp;
 }
 
 // #<Continuation $seq:53>
-char* foo_continuation_87(char* sp, struct Actor* actor) {
+char* foo_continuation_83(char* sp, struct Actor* actor) {
     char* bp = actor->bp;
     WRITE_DATUM(bp, 8, READ_DATUM(sp, -3));
     WRITE_DATUM(bp, 9, READ_DATUM(sp, -2));
-    datum_t d0 = READ_DATUM(bp, 0);
-    datum_t c1 = READ_DATUM(bp, 1);
-    datum_t d2 = READ_DATUM(bp, 2);
-    datum_t d4 = READ_DATUM(bp, 4);
     datum_t c5 = READ_DATUM(bp, 5);
     datum_t d6 = READ_DATUM(bp, 6);
-    sp = bp;
-    PUSH_DATUM(sp, d0);
-    PUSH_DATUM(sp, c1);
-    PUSH_DATUM(sp, d2);
-    PUSH_DATUM(sp, c5);
-    PUSH_DATUM(sp, d6);
-    PUSH_DATUM(sp, &foo_class_4);
-    PUSH_DATUM(sp, ((int64_t)d4 - (int64_t)((int64_t)d6 * (int64_t)((int64_t)d4 / (int64_t)d6))));
-    PUSH_DATUM(sp, IMMS(1) | OBJS(3));
-    PUSH_DATUM(sp, foo_method_function_82); // Main#gcd:of:
+    PUSH_DATUM(sp, foo_continuation_91);
+    PUSH_DATUM(sp, IMMS(1));
+    if (((int64_t)READ_DATUM(bp, 6) == (int64_t)0)) {
+        PUSH_DATUM(sp, foo_continuation_89);
+    } else {
+        PUSH_DATUM(sp, foo_continuation_90);
+    }
     return sp;
 }
 
 // #<Continuation $block:63>
-char* foo_continuation_88(char* sp, struct Actor* actor) {
+char* foo_continuation_84(char* sp, struct Actor* actor) {
     char* bp = actor->bp;
     WRITE_DATUM(bp, 10, READ_DATUM(sp, -3));
     WRITE_DATUM(bp, 11, READ_DATUM(sp, -2));
@@ -682,22 +696,24 @@ char* foo_continuation_88(char* sp, struct Actor* actor) {
 }
 
 // #<Continuation $seq:75>
-char* foo_continuation_83(char* sp, struct Actor* actor) {
+char* foo_continuation_85(char* sp, struct Actor* actor) {
     char* bp = actor->bp;
     WRITE_DATUM(bp, 12, READ_DATUM(sp, -3));
     WRITE_DATUM(bp, 13, READ_DATUM(sp, -2));
-    PUSH_DATUM(sp, foo_continuation_87);
-    PUSH_DATUM(sp, OBJS(1));
+    datum_t c5 = READ_DATUM(bp, 5);
+    datum_t d6 = READ_DATUM(bp, 6);
+    PUSH_DATUM(sp, foo_continuation_83);
+    PUSH_DATUM(sp, IMMS(1));
     if (((int64_t)READ_DATUM(bp, 6) == (int64_t)0)) {
-        PUSH_DATUM(sp, foo_continuation_88);
+        PUSH_DATUM(sp, foo_continuation_84);
     } else {
-        PUSH_DATUM(sp, foo_continuation_90);
+        PUSH_DATUM(sp, foo_continuation_88);
     }
     return sp;
 }
 
 // #<Continuation $block:84>
-char* foo_continuation_85(char* sp, struct Actor* actor) {
+char* foo_continuation_86(char* sp, struct Actor* actor) {
     char* bp = actor->bp;
     WRITE_DATUM(bp, 14, READ_DATUM(sp, -3));
     WRITE_DATUM(bp, 15, READ_DATUM(sp, -2));
@@ -713,32 +729,119 @@ char* foo_continuation_85(char* sp, struct Actor* actor) {
 }
 
 // #<Continuation $ifFalse:115>
-char* foo_continuation_86(char* sp, struct Actor* actor) {
+char* foo_continuation_87(char* sp, struct Actor* actor) {
     char* bp = actor->bp;
     WRITE_DATUM(bp, 16, READ_DATUM(sp, -3));
     WRITE_DATUM(bp, 17, READ_DATUM(sp, -2));
     datum_t c16 = READ_DATUM(bp, 16);
     datum_t d17 = READ_DATUM(bp, 17);
     PUSH_DATUM(sp, &foo_class_1);
-    PUSH_DATUM(sp, 0); // FIXME: False?
+    PUSH_DATUM(sp, 0);
     PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, c16); // FIXME: this doesn't look right
+    PUSH_DATUM(sp, c16);
     PUSH_DATUM(sp, d17);
     return sp;
 }
 
 // #<Continuation $ifFalse:118>
-char* foo_continuation_90(char* sp, struct Actor* actor) {
+char* foo_continuation_88(char* sp, struct Actor* actor) {
     char* bp = actor->bp;
     WRITE_DATUM(bp, 18, READ_DATUM(sp, -3));
     WRITE_DATUM(bp, 19, READ_DATUM(sp, -2));
     datum_t c18 = READ_DATUM(bp, 18);
     datum_t d19 = READ_DATUM(bp, 19);
     PUSH_DATUM(sp, &foo_class_1);
-    PUSH_DATUM(sp, 0); // FIXME: False?
+    PUSH_DATUM(sp, 0);
     PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, c18); // FIXME: this doesn't look right
+    PUSH_DATUM(sp, c18);
     PUSH_DATUM(sp, d19);
+    return sp;
+}
+
+// #<Continuation $block:141>
+char* foo_continuation_89(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 20, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 21, READ_DATUM(sp, -2));
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c3 = READ_DATUM(bp, 3);
+    datum_t d4 = READ_DATUM(bp, 4);
+    datum_t c5 = READ_DATUM(bp, 5);
+    datum_t d6 = READ_DATUM(bp, 6);
+    sp = bp;
+    PUSH_DATUM(sp, &foo_class_4);
+    PUSH_DATUM(sp, ((int64_t)d4 - (int64_t)((int64_t)d6 * (int64_t)((int64_t)d4 / (int64_t)d6))));
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+
+// #<Continuation $ifFalse:143>
+char* foo_continuation_90(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 22, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 23, READ_DATUM(sp, -2));
+    datum_t c22 = READ_DATUM(bp, 22);
+    datum_t d23 = READ_DATUM(bp, 23);
+    PUSH_DATUM(sp, &foo_class_1);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, c22);
+    PUSH_DATUM(sp, d23);
+    return sp;
+}
+
+// #<Continuation $seq:146>
+char* foo_continuation_91(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 24, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 25, READ_DATUM(sp, -2));
+    datum_t c3 = READ_DATUM(bp, 3);
+    datum_t d4 = READ_DATUM(bp, 4);
+    datum_t c5 = READ_DATUM(bp, 5);
+    datum_t d6 = READ_DATUM(bp, 6);
+    if (((int64_t)((int64_t)d4 - (int64_t)((int64_t)d6 * (int64_t)((int64_t)d4 / (int64_t)d6))) == (int64_t)0)) {
+        PUSH_DATUM(sp, foo_continuation_92);
+    } else {
+        PUSH_DATUM(sp, foo_continuation_93);
+    }
+    return sp;
+}
+
+// #<Continuation $block:149>
+char* foo_continuation_92(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c5 = READ_DATUM(bp, 5);
+    datum_t d6 = READ_DATUM(bp, 6);
+    sp = bp;
+    PUSH_DATUM(sp, c5);
+    PUSH_DATUM(sp, d6);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+
+// #<Continuation $ifFalse:151>
+char* foo_continuation_93(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c1 = READ_DATUM(bp, 1);
+    datum_t d2 = READ_DATUM(bp, 2);
+    datum_t c3 = READ_DATUM(bp, 3);
+    datum_t d4 = READ_DATUM(bp, 4);
+    datum_t c5 = READ_DATUM(bp, 5);
+    datum_t d6 = READ_DATUM(bp, 6);
+    sp = bp;
+    PUSH_DATUM(sp, d0);
+    PUSH_DATUM(sp, c1);
+    PUSH_DATUM(sp, d2);
+    PUSH_DATUM(sp, &foo_class_4);
+    PUSH_DATUM(sp, ((int64_t)d4 - (int64_t)((int64_t)d6 * (int64_t)((int64_t)d4 / (int64_t)d6))));
+    PUSH_DATUM(sp, &foo_class_4);
+    PUSH_DATUM(sp, ((int64_t)d6 - (int64_t)((int64_t)((int64_t)d4 - (int64_t)((int64_t)d6 * (int64_t)((int64_t)d4 / (int64_t)d6))) * (int64_t)((int64_t)d6 / (int64_t)((int64_t)d4 - (int64_t)((int64_t)d6 * (int64_t)((int64_t)d4 / (int64_t)d6)))))));
+    PUSH_DATUM(sp, IMMS(1) | OBJS(3));
+    PUSH_DATUM(sp, foo_method_function_82); // Main#gcd:of:
     return sp;
 }
 
@@ -750,25 +853,38 @@ struct FooMethod foo_method_79 = {
 };
 
 // #<BuiltinMethod Main#opaqueIdentity>
-struct FooMethod foo_method_91 = {
+struct FooMethod foo_method_97 = {
     .home = &foo_class_6,
     .selector = &foo_selector_22,
     .method_function = foo_builtin_24
 };
 
 // "run:in:"
-struct FooBytes foo_string_94 = {
+struct FooBytes foo_string_100 = {
     .size = 7,
     .data = { 'r','u','n',':','i','n',':', 0 }
 };
 
 // #run:in:
-struct FooSelector foo_selector_93 = {
-    .name = &foo_string_94
+struct FooSelector foo_selector_99 = {
+    .name = &foo_string_100
 };
 
+char* foo_method_function_101(char*, struct Actor*);
+char* foo_continuation_102(char*, struct Actor*);
+char* foo_continuation_103(char*, struct Actor*);
+char* foo_continuation_104(char*, struct Actor*);
+char* foo_continuation_105(char*, struct Actor*);
+char* foo_continuation_106(char*, struct Actor*);
+char* foo_continuation_107(char*, struct Actor*);
+char* foo_continuation_108(char*, struct Actor*);
+char* foo_continuation_109(char*, struct Actor*);
+char* foo_continuation_110(char*, struct Actor*);
+char* foo_continuation_111(char*, struct Actor*);
+char* foo_continuation_112(char*, struct Actor*);
+
 // #<CpsGraph Main#run:in:>
-char* foo_method_function_95(char* sp, struct Actor* actor) {
+char* foo_method_function_101(char* sp, struct Actor* actor) {
     // 0 - $return
     // 1 - $receiver class
     // 2 - $receiver datum
@@ -778,30 +894,230 @@ char* foo_method_function_95(char* sp, struct Actor* actor) {
     // 6 - system datum
     // 7 - layout word
     // -
+    // 8 - $ret class
+    // 9 - $ret datum
+    // 10 - $ret class
+    // 11 - $ret datum
+    // 12 - $ignore class
+    // 13 - $ignore datum
+    // 14 - $ret class
+    // 15 - $ret datum
+    // 16 - $ret class
+    // 17 - $ret datum
+    // 18 - $ignore class
+    // 19 - $ignore datum
+    // 20 - $ret class
+    // 21 - $ret datum
+    // 22 - $ret class
+    // 23 - $ret datum
+    // 24 - $ignore class
+    // 25 - $ignore datum
+    // 26 - layout word
     char* bp = actor->bp = sp - 8 * sizeof(datum_t);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(9));
+    PUSH_DATUM(sp, foo_continuation_104);
+    PUSH_DATUM(sp, IMMS(1));
+    if (((int64_t)12 == (int64_t)0)) {
+        PUSH_DATUM(sp, foo_continuation_102);
+    } else {
+        PUSH_DATUM(sp, foo_continuation_103);
+    }
+    return sp;
+}
+
+// #<Continuation $block:34>
+char* foo_continuation_102(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 8, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 9, READ_DATUM(sp, -2));
     datum_t d0 = READ_DATUM(bp, 0);
     sp = bp;
     PUSH_DATUM(sp, &foo_class_4);
-    PUSH_DATUM(sp, 42);
+    PUSH_DATUM(sp, 4);
     PUSH_DATUM(sp, OBJS(1));
     PUSH_DATUM(sp, d0);
     return sp;
 }
 
+// #<Continuation $ifFalse:36>
+char* foo_continuation_103(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 10, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 11, READ_DATUM(sp, -2));
+    datum_t c10 = READ_DATUM(bp, 10);
+    datum_t d11 = READ_DATUM(bp, 11);
+    PUSH_DATUM(sp, &foo_class_1);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, c10);
+    PUSH_DATUM(sp, d11);
+    return sp;
+}
+
+// #<Continuation $seq:40>
+char* foo_continuation_104(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 12, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 13, READ_DATUM(sp, -2));
+    PUSH_DATUM(sp, foo_continuation_107);
+    PUSH_DATUM(sp, IMMS(1));
+    if (((int64_t)4 == (int64_t)0)) {
+        PUSH_DATUM(sp, foo_continuation_105);
+    } else {
+        PUSH_DATUM(sp, foo_continuation_106);
+    }
+    return sp;
+}
+
+// #<Continuation $block:44>
+char* foo_continuation_105(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 14, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 15, READ_DATUM(sp, -2));
+    datum_t d0 = READ_DATUM(bp, 0);
+    sp = bp;
+    PUSH_DATUM(sp, &foo_class_4);
+    PUSH_DATUM(sp, 12);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+
+// #<Continuation $ifFalse:46>
+char* foo_continuation_106(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 16, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 17, READ_DATUM(sp, -2));
+    datum_t c16 = READ_DATUM(bp, 16);
+    datum_t d17 = READ_DATUM(bp, 17);
+    PUSH_DATUM(sp, &foo_class_1);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, c16);
+    PUSH_DATUM(sp, d17);
+    return sp;
+}
+
+// #<Continuation $seq:49>
+char* foo_continuation_107(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 18, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 19, READ_DATUM(sp, -2));
+    PUSH_DATUM(sp, foo_continuation_110);
+    PUSH_DATUM(sp, IMMS(1));
+    if (((int64_t)4 == (int64_t)0)) {
+        PUSH_DATUM(sp, foo_continuation_108);
+    } else {
+        PUSH_DATUM(sp, foo_continuation_109);
+    }
+    return sp;
+}
+
+// #<Continuation $block:52>
+char* foo_continuation_108(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 20, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 21, READ_DATUM(sp, -2));
+    datum_t d0 = READ_DATUM(bp, 0);
+    sp = bp;
+    PUSH_DATUM(sp, &foo_class_4);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+
+// #<Continuation $ifFalse:61>
+char* foo_continuation_109(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 22, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 23, READ_DATUM(sp, -2));
+    datum_t c22 = READ_DATUM(bp, 22);
+    datum_t d23 = READ_DATUM(bp, 23);
+    PUSH_DATUM(sp, &foo_class_1);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, c22);
+    PUSH_DATUM(sp, d23);
+    return sp;
+}
+
+// #<Continuation $seq:64>
+char* foo_continuation_110(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    WRITE_DATUM(bp, 24, READ_DATUM(sp, -3));
+    WRITE_DATUM(bp, 25, READ_DATUM(sp, -2));
+    if (((int64_t)0 == (int64_t)0)) {
+        PUSH_DATUM(sp, foo_continuation_111);
+    } else {
+        PUSH_DATUM(sp, foo_continuation_112);
+    }
+    return sp;
+}
+
+// #<Continuation $block:67>
+char* foo_continuation_111(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    datum_t d0 = READ_DATUM(bp, 0);
+    sp = bp;
+    PUSH_DATUM(sp, &foo_class_4);
+    PUSH_DATUM(sp, 4);
+    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, d0);
+    return sp;
+}
+
+// #<Continuation $ifFalse:68>
+char* foo_continuation_112(char* sp, struct Actor* actor) {
+    char* bp = actor->bp;
+    datum_t d0 = READ_DATUM(bp, 0);
+    datum_t c1 = READ_DATUM(bp, 1);
+    datum_t d2 = READ_DATUM(bp, 2);
+    sp = bp;
+    PUSH_DATUM(sp, d0);
+    PUSH_DATUM(sp, c1);
+    PUSH_DATUM(sp, d2);
+    PUSH_DATUM(sp, &foo_class_4);
+    PUSH_DATUM(sp, 0);
+    PUSH_DATUM(sp, &foo_class_4);
+    PUSH_DATUM(sp, ((int64_t)4 - (int64_t)((int64_t)0 * (int64_t)((int64_t)4 / (int64_t)0))));
+    PUSH_DATUM(sp, IMMS(1) | OBJS(3));
+    PUSH_DATUM(sp, foo_method_function_82); // Main#gcd:of:
+    return sp;
+}
+
 // #<UserMethod Main#run:in:>
-struct FooMethod foo_method_92 = {
+struct FooMethod foo_method_98 = {
     .home = &foo_class_6,
-    .selector = &foo_selector_93,
-    .method_function = foo_method_function_95
+    .selector = &foo_selector_99,
+    .method_function = foo_method_function_101
 };
 
 // #<MethodDictionary Main>
-struct FooMethodDictionary foo_methods_96 = {
+struct FooMethodDictionary foo_methods_118 = {
     .size = 3,
     .data = {
         &foo_method_79, // #<UserMethod Main#gcd:of:>
-        &foo_method_91, // #<BuiltinMethod Main#opaqueIdentity>
-        &foo_method_92, // #<UserMethod Main#run:in:>
+        &foo_method_97, // #<BuiltinMethod Main#opaqueIdentity>
+        &foo_method_98, // #<UserMethod Main#run:in:>
     }
 };
 
@@ -809,54 +1125,54 @@ struct FooMethodDictionary foo_methods_96 = {
 struct FooClass foo_class_6 = {
     .name = &foo_string_78,
     .own_class = &foo_class_7,
-    .methods = &foo_methods_96
+    .methods = &foo_methods_118
 };
 
 // "Main class"
-struct FooBytes foo_string_97 = {
+struct FooBytes foo_string_119 = {
     .size = 10,
     .data = { 'M','a','i','n',' ','c','l','a','s','s', 0 }
 };
 
 // "new"
-struct FooBytes foo_string_100 = {
+struct FooBytes foo_string_122 = {
     .size = 3,
     .data = { 'n','e','w', 0 }
 };
 
 // #new
-struct FooSelector foo_selector_99 = {
-    .name = &foo_string_100
+struct FooSelector foo_selector_121 = {
+    .name = &foo_string_122
 };
 
 // #<BuiltinMethodImpl new>
-char* foo_builtin_101(char* sp, struct Actor* actor) {
+char* foo_builtin_123(char* sp, struct Actor* actor) {
     char* bp = actor->bp = sp - 4 * sizeof(datum_t);
     datum_t cont = READ_DATUM(bp, 0);
     sp = bp;
     PUSH_DATUM(sp, &foo_class_6);
     PUSH_DATUM(sp, 0); // only empty classes for now!
-    PUSH_DATUM(sp, OBJS(1));
+    PUSH_DATUM(sp, OBJS(1))
     PUSH_DATUM(sp, cont);
     return sp;
 }
 
 // #<BuiltinMethod Main class#new>
-struct FooMethod foo_method_98 = {
+struct FooMethod foo_method_120 = {
     .home = &foo_class_7,
-    .selector = &foo_selector_99,
-    .method_function = foo_builtin_101
+    .selector = &foo_selector_121,
+    .method_function = foo_builtin_123
 };
 
 // #<BuiltinMethod Main class#opaqueIdentity>
-struct FooMethod foo_method_102 = {
+struct FooMethod foo_method_124 = {
     .home = &foo_class_7,
     .selector = &foo_selector_22,
     .method_function = foo_builtin_24
 };
 
 // #<BuiltinMethodImpl typecheck:>
-char* foo_builtin_104(char* sp, struct Actor* actor) {
+char* foo_builtin_126(char* sp, struct Actor* actor) {
     char* bp = actor->bp = sp - 6 * sizeof(datum_t);
     datum_t expectedClass = READ_DATUM(bp, 1);
     datum_t actualClass = READ_DATUM(bp, 3);
@@ -875,27 +1191,27 @@ char* foo_builtin_104(char* sp, struct Actor* actor) {
 }
 
 // #<BuiltinMethod Main class#typecheck:>
-struct FooMethod foo_method_103 = {
+struct FooMethod foo_method_125 = {
     .home = &foo_class_7,
     .selector = &foo_selector_29,
-    .method_function = foo_builtin_104
+    .method_function = foo_builtin_126
 };
 
 // #<MethodDictionary Main class>
-struct FooMethodDictionary foo_methods_105 = {
+struct FooMethodDictionary foo_methods_127 = {
     .size = 3,
     .data = {
-        &foo_method_98, // #<BuiltinMethod Main class#new>
-        &foo_method_102, // #<BuiltinMethod Main class#opaqueIdentity>
-        &foo_method_103, // #<BuiltinMethod Main class#typecheck:>
+        &foo_method_120, // #<BuiltinMethod Main class#new>
+        &foo_method_124, // #<BuiltinMethod Main class#opaqueIdentity>
+        &foo_method_125, // #<BuiltinMethod Main class#typecheck:>
     }
 };
 
 // #<Class Main class>
 struct FooClass foo_class_7 = {
-    .name = &foo_string_97,
+    .name = &foo_string_119,
     .own_class = &foo_class_3,
-    .methods = &foo_methods_105
+    .methods = &foo_methods_127
 };
 
 char* main_actor_exit(char* sp, struct Actor* actor) {
@@ -916,7 +1232,7 @@ char* main_actor_entry(char* sp, struct Actor* actor) {
     PUSH_DATUM(sp, 0); // FIXME System
     PUSH_DATUM(sp, 0); // FIXME    system datum
     PUSH_DATUM(sp, IMMS(1) | OBJS(3));
-    PUSH_DATUM(sp, foo_method_function_95);
+    PUSH_DATUM(sp, foo_method_function_101);
     return sp;
 }
 
