@@ -79,7 +79,13 @@ define StandardNamespace
     let namespace = Namespace empty.
     [
          "+",
+         "//",
+         "-",
+         "*",
          "addInteger:",
+         "subInteger:",
+         "mulInteger:",
+         "truncateInteger:",
          "ifFalse:",
          "ifTrue:",
          "ifTrue:ifFalse:",
@@ -430,6 +436,39 @@ class IntegerPlusImpl {}
 end
 
 
+class IntegerMulImpl {}
+    is InlineMethodImpl
+
+    method selector
+        "*" intern!
+
+    method inliner
+        { |a b| [b, "mulInteger:" intern, a] }!
+end
+
+
+class IntegerMinusImpl {}
+    is InlineMethodImpl
+
+    method selector
+        "-" intern!
+
+    method inliner
+        { |a b| [b, "subInteger:" intern, a] }!
+end
+
+
+class IntegerTruncateImpl {}
+    is InlineMethodImpl
+
+    method selector
+        "//" intern!
+
+    method inliner
+        { |a b| [b, "truncateInteger:" intern, a] }!
+end
+
+
 interface PrimitiveInlineMethodImpl
     is BuiltinMethodImpl
 
@@ -486,6 +525,48 @@ class IntegerAddIntegerImpl {}
         { |a b|
           [MAKE_INSTANCE, IntegerClassDefinition,
            [ADDI, [DATUM_OF, a], [DATUM_OF, b]]] }!
+end
+
+
+class IntegerMulIntegerImpl {}
+    is PrimitiveInlineMethodImpl
+
+    method selector
+        "mulInteger:" intern!
+
+
+    method primitiveInliner
+        { |a b|
+          [MAKE_INSTANCE, IntegerClassDefinition,
+           [IMUL, [DATUM_OF, a], [DATUM_OF, b]]] }!
+end
+
+
+class IntegerSubIntegerImpl {}
+    is PrimitiveInlineMethodImpl
+
+    method selector
+        "subInteger:" intern!
+
+
+    method primitiveInliner
+        { |a b|
+          [MAKE_INSTANCE, IntegerClassDefinition,
+           [SUBI, [DATUM_OF, b], [DATUM_OF, a]]] }!
+end
+
+
+class IntegerTruncateIntegerImpl {}
+    is PrimitiveInlineMethodImpl
+
+    method selector
+        "truncateInteger:" intern!
+
+
+    method primitiveInliner
+        { |a b|
+          [MAKE_INSTANCE, IntegerClassDefinition,
+           [IDIV, [DATUM_OF, b], [DATUM_OF, a]]] }!
 end
 
 
@@ -907,6 +988,12 @@ define IntegerClassDefinition
          hostClass: Integer
          methods: [BuiltinMethod new: IntegerPlusImpl new,
                    BuiltinMethod new: IntegerAddIntegerImpl new,
+                   BuiltinMethod new: IntegerMinusImpl new,
+                   BuiltinMethod new: IntegerSubIntegerImpl new,
+                   BuiltinMethod new: IntegerMulImpl new,
+                   BuiltinMethod new: IntegerMulIntegerImpl new,
+                   BuiltinMethod new: IntegerTruncateImpl new,
+                   BuiltinMethod new: IntegerTruncateIntegerImpl new,
                    BuiltinMethod new: OpaqueIdentityImpl new])!
 
 
@@ -1445,6 +1532,72 @@ class ADDI {}
 
     direct method apply: args
         Datum value: (args first hostValue :: Integer +
+                      args second hostValue :: Integer)!
+end
+
+
+class SUBI {}
+    is OperationKind
+
+
+    direct method name
+        "subi"!
+
+
+    direct method type: _
+        IntegerClassDefinition!
+
+
+    direct method visit: operation by: visitor
+        visitor visitSubi: operation!
+
+
+    direct method apply: args
+        Datum value: (args first hostValue :: Integer -
+                      args second hostValue :: Integer)!
+end
+
+
+class IMUL {}
+    is OperationKind
+
+
+    direct method name
+        "imul"!
+
+
+    direct method type: _
+        IntegerClassDefinition!
+
+
+    direct method visit: operation by: visitor
+        visitor visitImul: operation!
+
+
+    direct method apply: args
+        Datum value: (args first hostValue :: Integer *
+                      args second hostValue :: Integer)!
+end
+
+
+class IDIV {}
+    is OperationKind
+
+
+    direct method name
+        "idiv"!
+
+
+    direct method type: _
+        IntegerClassDefinition!
+
+
+    direct method visit: operation by: visitor
+        visitor visitIdiv: operation!
+
+
+    direct method apply: args
+        Datum value: (args first hostValue :: Integer //
                       args second hostValue :: Integer)!
 end
 
