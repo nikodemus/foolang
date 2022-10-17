@@ -1,19 +1,15 @@
 #include "system_posix.h"
 
 #include <stdlib.h>
-#include <sys/sysinfo.h>
 
 #undef NDEBUG
 #include <assert.h>
 
-size_t system_number_of_cpu_cores(void) {
-  int n = get_nprocs();
-  if (n < 0) {
-    return 0;
-  } else {
-    return n;
-  }
-}
+#if defined(__linux__)
+#include "system_linux.c"
+#else
+#include "system_generic.c"
+#endif
 
 SystemLock_t make_SystemLock(void) {
   pthread_mutex_t* mutex = malloc(sizeof(pthread_mutex_t));
