@@ -4032,7 +4032,7 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
     method visitSelect: aSelect with: args
         -- XXX: refactor
         ForAllVariables
-            in: args
+            in: (args append: [aSelect cond, aSelect then, aSelect else])
             doSorted: { |each| self emitCopyVariable: each }.
         args do: { |each|
                    CArgument
@@ -4041,7 +4041,7 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
                        withStackmap: stackmap }.
         args isEmpty
             ifFalse: { backend output
-                           print: "    PUSH_DATUM(sp, OBJS({args size}));\n" }.
+                           print: "    PUSH_DATUM(sp, IMMS({args size}));\n" }.
         let cond = aSelect cond.
         cond type is BooleanClassDefinition
             assert: "FIXME: Select with non-boolean cond".
