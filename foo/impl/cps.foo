@@ -512,7 +512,7 @@ interface PrimitiveInlineMethodImpl
                       return op }.
         -- Eg. "inline reference" to IntegerClassDefinition.
         (CpsValue includes: pattern)
-            ifFalse: { Error raise: "Unexpected value in builPattern: {pattern}" }.
+            ifFalse: { Error raise: "Unexpected value in buildPattern: {pattern}" }.
         graph ensureConstant: pattern!
 end
 
