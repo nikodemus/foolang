@@ -2964,6 +2964,15 @@ class CpsCopier { graph copied }
             ifNonePut: { graph ensureConstant: aConstant value }!
 
 
+    method visitSelect: aSelect
+        copied
+            at: aSelect
+            ifNonePut: { graph
+                             select: (aSelect cond visitBy: self)
+                             then: (aSelect then visitBy: self)
+                             else: (aSelect else visitBy: self) }!
+
+
     method visitApplication: anApp
         -- Same care as with continuation applies here!
         copied
