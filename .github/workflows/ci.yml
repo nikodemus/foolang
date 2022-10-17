@@ -35,6 +35,15 @@ jobs:
       - name: Rustc version
         run: rustc --version
 
+      # Clang is under brew, not in path
+      - name: Extend path to include Clang
+        run: |
+             brew install llvm
+             echo $(brew --prefix llvm)/bin >> $GITHUB_PATH
+
+      - name: Check clang
+        run: clang --version
+
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
@@ -246,6 +255,16 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
+
+      # Clang is under brew, not in path
+      - name: Extend path to include Clang
+        run: |
+             brew install llvm
+             echo $(brew --prefix llvm)/bin >> $GITHUB_PATH
+        if: ${{ runner.os == 'MacOS' }}
+
+      - name: Check clang
+        run: clang --version
 
       - name: Test Runtime
         run: make test-runtime
