@@ -3829,6 +3829,7 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
 
 
     method emitContinuation: aCont
+        aCont isUnused not assert: "Don't emit unused continuations.".
         -- Currently entry continuation is the method function
         -- entry point, and therefore gets its header from the
         -- the CpsGraph, not the continuation.
