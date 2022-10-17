@@ -8,24 +8,35 @@
 set -euo pipefail
 
 if [ -z "$@" ]; then
-    output=cc
-else
-    output=$1
+    echo "ERROR: find-clang.sh needs an argument: --cc, --ar, or --debug" 2>&1
+    exit 1
 fi
 
+case $1 in
+    --debug)
+        IFS=:
+        for dir in $PATH; do
+            echo "---"
+            echo "PATH: $dir"
+            ls -C $dir || true
+        done
+        exit
+        ;;
+    --ar)
+        output=ar
+        ;;
+    --cc)
+        output=cc
+        ;;
+esac
+
 for v in "" -14 -13 -12 -11 -10 -9 -8 -7 -6; do
-    cc=$(which clang$v || echo)
-    ar=$(which llvm-ar$v || echo)
-    [ -n "$cc" ] || continue
-    [ -n "$ar" ] || continue
     cc=clang$v
     ar=llvm-ar$v
+    $cc --version &> /dev/null || continue
+    $ar --version &> /dev/null || continue
     echo ${!output}
     exit 0
 done
 
-echo "ERROR - could not find both clang and llvm-ar!" 1>&2
 exit 1
-
-    
-    
