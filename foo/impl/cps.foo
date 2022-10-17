@@ -615,6 +615,10 @@ class MethodDictionary { home methods }
         methods at: selector!
 
 
+    method at: selector ifNone: block
+        methods at: selector ifNone: block!
+
+
     method put: aMethod at: selector
         methods put: aMethod at: selector!
 
