@@ -303,4 +303,4 @@ jobs:
           sudo apt-get install -y emacs26-nox
 
       - name: Test foolang-mode
-        run: bash test-elisp.sh
+        run: bash tests/test-elisp.sh
