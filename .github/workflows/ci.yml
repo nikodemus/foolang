@@ -37,7 +37,9 @@ jobs:
 
       # Clang is under brew, not in path
       - name: Extend path to include Clang
-        run: echo $(brew --prefix llvm)/bin >> $GITHUB_PATH
+        run: |
+             brew install llvm
+             echo $(brew --prefix llvm)/bin >> $GITHUB_PATH
 
       - name: Check clang
         run: clang --version
@@ -256,7 +258,10 @@ jobs:
 
       # Clang is under brew, not in path
       - name: Extend path to include Clang
-        run: echo $(brew --prefix llvm)/bin >> $GITHUB_PATH
+        run: |
+             brew install llvm
+             echo $(brew --prefix llvm)/bin >> $GITHUB_PATH
+        if: ${{ runner.os == 'MacOS' }}
 
       - name: Check clang
         run: clang --version
