@@ -3755,6 +3755,10 @@ class CExpr { backend stackmap }
             => { |info| return info datumTemp }.
         Error raise: "No info for datum: {var}"!
 
+    method visitMakeInstance: aMakeInstance
+        -- XXX HERE
+        Error raise: "TODO: CExpr visitMakeInstance: {aMakeInstance}"!
+
     method visitAddi: anAddi
         let left = anAddi args first visitBy: self.
         let right = anAddi args second visitBy: self.
