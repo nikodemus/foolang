@@ -1667,6 +1667,9 @@ class IS_EQ {}
     direct method name
         "isEq"!
 
+    direct method type: _
+        BooleanClassDefinition!
+
     direct method visit: operation by: visitor
         visitor visitIsEq: operation!
 end
