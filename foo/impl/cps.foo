@@ -4753,7 +4753,7 @@ struct FooClass foo_class_1 = \{
                                               let r = a - q * b.
                                               self gcd: b of: r!
                                           method run: command in: system
-                                              42!
+                                              self gcd: 12 of: 4!
                                       end"
                       with: [IntegerClassDefinition]
                       in: ns.
