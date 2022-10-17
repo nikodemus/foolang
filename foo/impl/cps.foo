@@ -3868,8 +3868,21 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
                                 graph: graph
                                 stackmap: Dictionary new
                                 frameSize: 0.
+        backend output newline.
+        graph continuations
+            do: { |each| graphBackend emitDeclaration: each }.
         graph continuations
             do: { |each| graphBackend emitContinuation: each }!
+
+
+    method emitDeclaration: aCont
+        let thing = aCont is graph entry
+            ifTrue: { graph }
+            ifFalse: { aCont }.
+        let info = backend declare: thing.
+        backend output
+            print: "char* {info name}(char*, struct Actor*);\n"!
+
 
 
     method emitContinuation: aCont
