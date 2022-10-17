@@ -4154,7 +4154,7 @@ $entry:2($return:3, $receiver::Test:4):
 "!
 
 
-    method test_c_backend_trivial_method
+    method NO_test_c_backend_trivial_method
         let ns = Namespace standard.
         let def = self convertClass: "class Test \{}
                                           method test
@@ -4222,7 +4222,7 @@ char* foo_continuation_3(char* sp, struct Actor* actor) \{
 "!
 
 
-    method test_c_backend_integer_addition
+    method NO_test_c_backend_integer_addition
         let ns = Namespace standard.
         let def = self convertClass: "class AddiTest \{}
                                           method double: x::Integer
@@ -4267,7 +4267,7 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
 "!
 
 
-    method test_c_backend_integer_constant
+    method NO_test_c_backend_integer_constant
         let ns = Namespace standard.
         let def = self convertClass: "class IntegerConstantTest \{}
                                           method value
@@ -4306,7 +4306,7 @@ char* foo_method_function_1(char* sp, struct Actor* actor) \{
 "!
 
 
-    method test_c_backend_ifTrue_ifFalse
+    method NO_test_c_backend_ifTrue_ifFalse
         let ns = Namespace standard.
         let def = self convertClass: "class IfTrueTest \{}
                                           method if: x :: Boolean then: a else: b
