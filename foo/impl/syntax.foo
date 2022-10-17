@@ -582,6 +582,9 @@ class SyntaxIs { left right }
     method visitBy: visitor
         visitor visitIs: self!
 
+    method visitBy: visitor with: arg
+        visitor visitIs: self with: arg!
+
     method weight
         left weight + right weight + 1!
 

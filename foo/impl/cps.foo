@@ -4478,7 +4478,7 @@ struct FooClass foo_class_1 = \{
 \};
 "!
 
-    method test_c_backend_emit_main
+    method test_c_backend_emit_main_42
         let ns = Namespace standard.
         let def = self convertClass: "class Main \{}
                                           method run: command in: system
@@ -4487,6 +4487,28 @@ struct FooClass foo_class_1 = \{
                       with: [IntegerClassDefinition]
                       in: ns.
         let expected = (system currentDirectory / "tests/c-backend/main_42.c")
+                           readString.
+        assert that: { CBackend emitMainToString: def in: ns }
+               equals: expected!
+
+
+    method test_c_backend_emit_main_gcd
+        let ns = Namespace standard.
+        let def = self convertClass: "class Main \{}
+                                          method gcd: a::Integer of: b::Integer
+                                              a is 0
+                                                  ifTrue: \{ return b }.
+                                              b is 0
+                                                  ifTrue: \{ return a }.
+                                              let q = a // b.
+                                              let r = a - q * b.
+                                              self gcd: b of: r!
+                                          method run: command in: system
+                                              42!
+                                      end"
+                      with: [IntegerClassDefinition]
+                      in: ns.
+        let expected = (system currentDirectory / "tests/c-backend/main_gcd.c")
                            readString.
         assert that: { CBackend emitMainToString: def in: ns }
                equals: expected!
