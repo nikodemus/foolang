@@ -1691,7 +1691,6 @@ class IS_EQ {}
         op isConstant
             ifTrue: { return self simplifyIfConstant: op in: graph with: worklist }.
         -- 1. Unknown types involved, cannot simplify.
-        Log println: "XXX types of: {op args collect: #toString}".
         let types = op args collect: #type.
         (types allSatisfy: { |each| ClassDefinition includes: each })
             ifFalse: { return False }.
