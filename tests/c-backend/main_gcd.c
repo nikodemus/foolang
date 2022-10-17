@@ -12,6 +12,12 @@ struct FooClass foo_class_5;
 struct FooClass foo_class_6;
 struct FooClass foo_class_7;
 
+char* foo_continuation_80(char*, struct Actor*);
+char* foo_continuation_83(char*, struct Actor*);
+char* foo_continuation_85(char*, struct Actor*);
+char* foo_continuation_86(char*, struct Actor*);
+char* foo_continuation_90(char*, struct Actor*);
+
 // "Boolean"
 struct FooBytes foo_string_8 = {
     .size = 7,
@@ -608,9 +614,9 @@ char* foo_method_function_82(char* sp, struct Actor* actor) {
     // 19 - $ret datum
     // 20 - layout word
     char* bp = actor->bp = sp - 8 * sizeof(datum_t);
-    if (READ_DATUM(bp, 3) != &foo_class_4) // a :: Integer
+    if (READ_DATUM(bp, 3) != (datum_t)&foo_class_4) // a :: Integer
         return runtime_type_error(sp, actor);
-    if (READ_DATUM(bp, 5) != &foo_class_4) // b :: Integer
+    if (READ_DATUM(bp, 5) != (datum_t)&foo_class_4) // b :: Integer
         return runtime_type_error(sp, actor);
     PUSH_DATUM(sp, 0);
     PUSH_DATUM(sp, 0);
@@ -627,7 +633,7 @@ char* foo_method_function_82(char* sp, struct Actor* actor) {
     PUSH_DATUM(sp, OBJS(6));
     PUSH_DATUM(sp, foo_continuation_83);
     PUSH_DATUM(sp, OBJS(1));
-    if (((int64_t)READ_DATUM(bp, 4) = (int64_t)&0)) {
+    if (((int64_t)READ_DATUM(bp, 4) == (int64_t)0)) {
         PUSH_DATUM(sp, foo_continuation_85);
     } else {
         PUSH_DATUM(sp, foo_continuation_86);
@@ -643,7 +649,6 @@ char* foo_continuation_87(char* sp, struct Actor* actor) {
     datum_t d0 = READ_DATUM(bp, 0);
     datum_t c1 = READ_DATUM(bp, 1);
     datum_t d2 = READ_DATUM(bp, 2);
-    datum_t c3 = READ_DATUM(bp, 3);
     datum_t d4 = READ_DATUM(bp, 4);
     datum_t c5 = READ_DATUM(bp, 5);
     datum_t d6 = READ_DATUM(bp, 6);
@@ -683,7 +688,7 @@ char* foo_continuation_83(char* sp, struct Actor* actor) {
     WRITE_DATUM(bp, 13, READ_DATUM(sp, -2));
     PUSH_DATUM(sp, foo_continuation_87);
     PUSH_DATUM(sp, OBJS(1));
-    if (((int64_t)READ_DATUM(bp, 6) = (int64_t)&0)) {
+    if (((int64_t)READ_DATUM(bp, 6) == (int64_t)0)) {
         PUSH_DATUM(sp, foo_continuation_88);
     } else {
         PUSH_DATUM(sp, foo_continuation_90);
@@ -715,9 +720,9 @@ char* foo_continuation_86(char* sp, struct Actor* actor) {
     datum_t c16 = READ_DATUM(bp, 16);
     datum_t d17 = READ_DATUM(bp, 17);
     PUSH_DATUM(sp, &foo_class_1);
-    PUSH_DATUM(sp, False);
+    PUSH_DATUM(sp, 0); // FIXME: False?
     PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, c16);
+    PUSH_DATUM(sp, c16); // FIXME: this doesn't look right
     PUSH_DATUM(sp, d17);
     return sp;
 }
@@ -730,9 +735,9 @@ char* foo_continuation_90(char* sp, struct Actor* actor) {
     datum_t c18 = READ_DATUM(bp, 18);
     datum_t d19 = READ_DATUM(bp, 19);
     PUSH_DATUM(sp, &foo_class_1);
-    PUSH_DATUM(sp, False);
+    PUSH_DATUM(sp, 0); // FIXME: False?
     PUSH_DATUM(sp, OBJS(1));
-    PUSH_DATUM(sp, c18);
+    PUSH_DATUM(sp, c18); // FIXME: this doesn't look right
     PUSH_DATUM(sp, d19);
     return sp;
 }

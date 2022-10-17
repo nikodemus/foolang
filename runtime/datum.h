@@ -8,6 +8,9 @@ typedef int64_t datum_t;
 #define READ_DATUM(p, offs) \
   (((datum_t*)p)[offs])
 
+#define WRITE_DATUM(p, offs, datum) \
+  (((datum_t*)p)[offs] = (datum))
+
 #define PUSH_DATUM(p, datum) \
   { p += sizeof(datum_t); *((datum_t*)p) = (datum_t)datum; }
 
