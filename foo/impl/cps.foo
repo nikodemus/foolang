@@ -212,9 +212,8 @@ class UserMethod { selector home cps }
     method inlineIn: aCont in: graph with: worklist
         cps is False
             ifTrue: { return False }.
-        -- Prevent self-inlining.
-        cps is graph
-            ifTrue: { return False }.
+        (graph allowInline: cps)
+            ifFalse: { return False }.
         let cc = aCont target target.
         aCont target: (CpsCopier copy: cps entry to: graph).
         aCont prependArgs: [cc].
@@ -2272,6 +2271,7 @@ class CpsGraph { entry::Continuation
                  constants::Dictionary
                  globals::Dictionary -- XXX: why here???
                  continuations::List
+                 inlined::Dictionary
                  receiver -- False or Variable
                  home     -- False or Method
                }
@@ -2297,6 +2297,7 @@ class CpsGraph { entry::Continuation
                         constants: Dictionary new
                         globals: Dictionary new
                         continuations: (List with: entry)
+                        inlined: Dictionary new
                         receiver: False
                         home: False.
         exit addUse: exit.
@@ -2328,6 +2329,7 @@ class CpsGraph { entry::Continuation
                         constants: Dictionary new
                         globals: Dictionary new
                         continuations: (List with: entry)
+                        inlined: Dictionary new
                         receiver: receiver
                         home: aMethod.
         exit addUse: exit.
@@ -2345,6 +2347,14 @@ class CpsGraph { entry::Continuation
 
     method uses
         Set new!
+
+
+    method allowInline: graph
+        -- Allow inlining each graph only once. A primitive measure against
+        -- recursive inlining.
+        inlined at: graph
+                ifNone: { inlined at: graph put: False.
+                          True }!
 
 
     method displayString
