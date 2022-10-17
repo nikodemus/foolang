@@ -1,18 +1,29 @@
 .PHONY: all
 all:
 	@echo "targets:"
-	@echo " - test (test-rust, test-cps, test-c-backend, test-benchmark)"
+	@echo " - test (test-rust, test-elisp, test-foolang, test-cps,"
+	@echo "   test-runtime, test-c-backend, test-benchmark)"
 	@echo " - clean (clean-c, clean-rust)"
 	@echo " - commit (tests and commits)"
 	@echo " - amend (tests and amends last commit)"
 
 .EXTRA_PREREQS:= $(abspath $(lastword $(MAKEFILE_LIST)))
 
-CC := $(shell bash ./find-clang.sh cc)
-AR := $(shell bash ./find-clang.sh ar)
+CC := $(shell bash ./find-tool.sh --cc)
+AR := $(shell bash ./find-tool.sh --ar)
+OK := ok
 
-ifeq ($(CC), "")
-	$(error Could not find matching clang versions for CC and AR!)
+ifeq ($(strip $(CC)),)
+	OK :=
+endif
+
+ifeq ($(strip $(AR)),)
+	OK :=
+endif
+
+ifeq ($(strip $(OK)),)
+    $(shell bash ./find-tool.sh --debug 1>&2)
+    $(error ERROR - Could not find both CC and AR!)
 endif
 
 $(info Using CC = $(CC), AR = $(AR))
@@ -103,7 +114,12 @@ build/%.o : %.c
 .PHONY: build/%.run
 build/%.run: build/%$(EXE)
 	@echo Running: $<
-	@$<
+	@set -eu; \
+	if [ -f $*.output ]; then \
+		$< | diff --strip-trailing-cr -u - $*.output; \
+	else \
+		$<; \
+    fi
 
 .PHONY: test-benchmark
 test-benchmark: $(BENCHMARK_RUNS)
@@ -126,8 +142,13 @@ test-cps:
 test-rust:
 	@cargo test
 
+.PHONY: test-elisp
+test-elisp:
+	@tests/test-elisp.sh
+
 .PHONY: test
-test: test-rust test-foolang test-cps test-runtime test-c-backend test-benchmark
+test: test-rust test-elisp test-foolang
+test: test-cps test-runtime test-c-backend test-benchmark
 
 .PHONY: commit
 commit: test

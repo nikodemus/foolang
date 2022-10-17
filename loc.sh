@@ -7,8 +7,8 @@ cd $(dirname $0)
 TOTAL=0
 
 count() {
-    local where=$1
-    local name=$2
+    local name=$1; shift
+    local where=$@
     local lines=$(eval git ls-files $where | $name | xargs wc -l | awk 'END { print $1 }')
     echo "$name $lines" | sed -s 's|_|/|g'
     TOTAL=$((TOTAL+lines))
@@ -40,11 +40,11 @@ Markdown() {
     grep -E '.(md)$'
 }
 
-count foo   "Foolang  "
-count docs  "Markdown "
-count elisp "Elisp    "
-count host  "C        "
-count .     "Rust_code"
-count .     "Rust_test"
-echo        "---------------"
-echo        "    Total" $TOTAL
+count "Foolang  " foo
+count "Markdown  " docs
+count "Elisp     " elisp
+count "C         " c runtime tests
+count "Rust_code " .
+count "Rust_test " .
+echo  "---------------"
+echo  "    Total" $TOTAL

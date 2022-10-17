@@ -35,6 +35,15 @@ jobs:
       - name: Rustc version
         run: rustc --version
 
+      # Clang is under brew, not in path
+      - name: Extend path to include Clang
+        run: |
+             brew install llvm
+             echo $(brew --prefix llvm)/bin >> $GITHUB_PATH
+
+      - name: Check clang
+        run: clang --version
+
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
@@ -59,7 +68,7 @@ jobs:
         run: bash build.sh --bootstrap
 
       - name: Self Test
-        run: bash test_foo2.sh
+        run: bash test_foo.sh
 
       - name: Test Foolang
         run: cargo run foo/impl/test_foolang.foo --use=foo/lib
@@ -247,6 +256,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # Clang is under brew, not in path
+      - name: Extend path to include Clang
+        run: |
+             brew install llvm
+             echo $(brew --prefix llvm)/bin >> $GITHUB_PATH
+        if: ${{ runner.os == 'MacOS' }}
+
+      - name: Check clang
+        run: clang --version
+
       - name: Test Runtime
         run: make test-runtime
 
@@ -285,10 +304,10 @@ jobs:
         run: bash build.sh --no-interpreter-build
 
       - name: Self Test
-        run: bash test_foo2.sh
+        run: bash tests/test_foo.sh
 
       - name: No duplicate declarations
-        run: bash no_duplicate_declarations.sh
+        run: bash tests/no_duplicate_declarations.sh
 
   test-foolang-mode:
     name: "Test foolang Emacs mode"
@@ -303,4 +322,4 @@ jobs:
           sudo apt-get install -y emacs26-nox
 
       - name: Test foolang-mode
-        run: bash test-elisp.sh
+        run: bash tests/test-elisp.sh
