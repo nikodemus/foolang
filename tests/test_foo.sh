@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-source utils.sh
+source ../utils.sh
 
 FOO=$(exename build/foo)
 
