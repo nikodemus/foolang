@@ -892,7 +892,7 @@ define ClassMethodDictionary
     new!
 
 
-class Datum { value }
+class Datum { type value }
     is Object
     is CpsValue
 
@@ -909,9 +909,6 @@ class Datum { value }
 
     method hostValue
         value!
-
-    method type
-        Error raise: "Datum has no type!"!
 end
 
 class Instance { _class::ClassDefinition
@@ -1537,7 +1534,8 @@ class ADDI {}
 
 
     direct method apply: args
-        Datum value: (args first hostValue :: Integer +
+        Datum type: IntegerClassDefinition
+              value: (args first hostValue :: Integer +
                       args second hostValue :: Integer)!
 end
 
@@ -1559,7 +1557,8 @@ class SUBI {}
 
 
     direct method apply: args
-        Datum value: (args first hostValue :: Integer -
+        Datum type: IntegerClassDefinition
+              value: (args first hostValue :: Integer -
                       args second hostValue :: Integer)!
 end
 
@@ -1581,7 +1580,8 @@ class IMUL {}
 
 
     direct method apply: args
-        Datum value: (args first hostValue :: Integer *
+        Datum type: IntegerClassDefinition
+              value: (args first hostValue :: Integer *
                       args second hostValue :: Integer)!
 end
 
@@ -1609,7 +1609,8 @@ class IDIV {}
             ifFalse: { False }!
 
     direct method apply: args
-        Datum value: (args first hostValue :: Integer /
+        Datum type: IntegerClassDefinition
+              value: (args first hostValue :: Integer /
                       args second hostValue :: Integer) :: Integer!
 end
 
@@ -1654,8 +1655,8 @@ class DATUM_OF {}
         "datumOf"!
 
     direct method apply: args
-        Datum value: args first hostValue!
-
+        Datum type: args first type
+              value: args first hostValue!
 
     direct method simplify: op in: graph with: worklist
         let arg = op args first.
@@ -1677,7 +1678,8 @@ class IS_EQ {}
         "isEq"!
 
     direct method apply: args
-        Datum value: (args first hostValue is args second hostValue)!
+        Datum type: BooleanClassDefinition
+              value: (args first hostValue is args second hostValue)!
 
     direct method type: _
         BooleanClassDefinition!
@@ -3615,6 +3617,9 @@ class CBackend { output declared emitted dependencies }
         (Instance includes: thing)
             ifTrue: { thing type is IntegerClassDefinition
                           ifTrue: { return "{thing}" } }.
+        (Datum includes: thing)
+            ifTrue: { thing type is IntegerClassDefinition
+                          ifTrue: { return "{thing}" } }.
         -- FIXME: Would be nice if the name identified which graph
         -- aka method_function_<id> the continuation belonged to.
         (Continuation includes: thing)
@@ -3637,6 +3642,9 @@ class CBackend { output declared emitted dependencies }
         (MethodDictionary includes: thing)
             ifTrue: { return "struct FooMethodDictionary" }.
         (Instance includes: thing)
+            ifTrue: { thing type is IntegerClassDefinition
+                          ifTrue: { return "instance_t" } }.
+        (Datum includes: thing)
             ifTrue: { thing type is IntegerClassDefinition
                           ifTrue: { return "datum_t" } }.
         (String includes: thing)
