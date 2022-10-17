@@ -288,7 +288,7 @@ jobs:
         run: bash test_foo2.sh
 
       - name: No duplicate declarations
-        run: bash no_duplicate_declarations.sh
+        run: bash tests/no_duplicate_declarations.sh
 
   test-foolang-mode:
     name: "Test foolang Emacs mode"
