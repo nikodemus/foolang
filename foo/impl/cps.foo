@@ -1505,10 +1505,14 @@ interface OperationKind
         self simplifyIfConstant: op in: graph with: worklist!
 
 
+    direct method isConstant: op
+        op args allSatisfy: #isConstant!
+
+
     direct method simplifyIfConstant: op in: graph with: worklist
         -- General-purpose constant-folding for ops. Must opt-out via
-        -- #isFoldable.
-        (op args allSatisfy: #isConstant)
+        -- #isFoldable, #isConstant:, or by specializing #simplify:in:with.
+        (self isConstant: op)
             ifTrue: { let argVals = op args collect: #value.
                       let value = op kind apply: argVals.
                       let constant = graph ensureConstant: value.
@@ -1597,6 +1601,12 @@ class IDIV {}
     direct method visit: operation by: visitor
         visitor visitIdiv: operation!
 
+    direct method isConstant: op
+        -- If the second argument is zero, then this is not constant,
+        -- but an error.
+        (op args allSatisfy: #isConstant)
+            ifTrue: { (op args second value hostValue is 0) not }
+            ifFalse: { False }!
 
     direct method apply: args
         Datum value: (args first hostValue :: Integer //
