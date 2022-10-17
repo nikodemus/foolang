@@ -3920,19 +3920,21 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
         -- Where the application will return.
         let target = anApp target.
         -- Function we're applying.
-        let function = (anApp function :: Constant) value.
+        let function = anApp function.
+        (Constant includes: function)
+            ifFalse: { Error raise: "TODO: handle unresolved application: {function}" }.
+        let functionValue = function value.
         -- 1. Collect variables from all argument expressions.
         -- 2. Copy each variable to a temporary datum_t.
         ForAllVariables
-            in: (args append: [target, function])
+            in: (args append: [target, functionValue])
             doSorted: { |each| self emitCopyVariable: each }.
         -- 3. Iff target is graph exit, then this is a tail-application: pop frame by setting sp = bp.
         anApp target is graph exit
             ifTrue: { backend output print: "    sp = bp;\n" }.
         -- 4. Push application args: target addr, copies of arguments, layout, and
         -- function addr.
-        let function = (anApp function :: Constant) value.
-        let functionInfo = backend declare: function impl.
+        let functionInfo = backend declare: functionValue impl.
         CArgument
             emit: anApp target
             withBackend: backend
@@ -3945,7 +3947,7 @@ class CpsGraphCBackend { backend graph stackmap frameSize }
                       withStackmap: stackmap }.
         backend output
             ; print: "    PUSH_DATUM(sp, IMMS(1) | OBJS({args size}));\n"
-            ; print: "    PUSH_DATUM(sp, {functionInfo name}); // {function printName}\n"
+            ; print: "    PUSH_DATUM(sp, {functionInfo name}); // {functionValue printName}\n"
             ; print: "    return sp;\n"!
 
 end
