@@ -7,6 +7,8 @@
 
 #if defined(__linux__)
 #include "system_linux.c"
+#elif defined(__APPLE__)
+#include "system_macos.c"
 #else
 #include "system_generic.c"
 #endif
