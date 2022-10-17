@@ -3827,7 +3827,7 @@ class CExpr { backend stackmap }
         left type is right type
             ifTrue: { let leftDatum = left visitBy: self.
                       let rightDatum = right visitBy: self.
-                      "((int64_t){leftDatum} = (int64_t){rightDatum})" }
+                      "((int64_t){leftDatum} == (int64_t){rightDatum})" }
             ifFalse: { Error raise: "TODO: is with an an uncertain type" }!
 
 end
