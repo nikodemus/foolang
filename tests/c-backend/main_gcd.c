@@ -1152,7 +1152,7 @@ char* foo_builtin_123(char* sp, struct Actor* actor) {
     sp = bp;
     PUSH_DATUM(sp, &foo_class_6);
     PUSH_DATUM(sp, 0); // only empty classes for now!
-    PUSH_DATUM(sp, OBJS(1))
+    PUSH_DATUM(sp, OBJS(1));
     PUSH_DATUM(sp, cont);
     return sp;
 }
