@@ -2849,7 +2849,8 @@ class CpsOptimizer { worklist graph policy }
         let worklist = Worklist new.
         graph doNodes: { |each| worklist push: each }.
         (self worklist: worklist graph: graph policy: policy)
-            optimize!
+            optimize.
+        graph cleanup!
 
 
     method optimize
