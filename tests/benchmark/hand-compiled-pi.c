@@ -171,7 +171,7 @@ char* pi_entry(char* sp, struct Actor* actor) {
 char* main_exit(char* sp, struct Actor* actor) {
   (void)actor;
   double f = ARG_F64(sp, 1);
-  printf("    pi = %f\n", f);
+  printf("    pi = %.2f\n", f);
   POP_POINTER(sp);
   POP_I64(sp);
   POP_I64(sp);

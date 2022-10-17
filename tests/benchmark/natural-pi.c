@@ -40,6 +40,6 @@ int main(int argc, char** argv) {
     mypi = dopi;
   }
   double gotpu = mypi();
-  printf("    pi = %f\n", gotpu);
+  printf("    pi = %.2f\n", gotpu);
   return 0;
 }
