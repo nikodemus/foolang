@@ -9,12 +9,21 @@ all:
 
 .EXTRA_PREREQS:= $(abspath $(lastword $(MAKEFILE_LIST)))
 
-CC := $(shell bash ./find-clang.sh --cc)
-AR := $(shell bash ./find-clang.sh --ar)
+CC := $(shell bash ./find-tool.sh --cc)
+AR := $(shell bash ./find-tool.sh --ar)
+OK := ok
 
 ifeq ($(strip $(CC)),)
-    $(shell bash ./find-clang.sh --debug 1>&2)
-    $(error ERROR - Could not find matching clang version for CC and AR!)
+	OK :=
+endif
+
+ifeq ($(strip $(AR)),)
+	OK :=
+endif
+
+ifeq ($(strip $(OK)),)
+    $(shell bash ./find-tool.sh --debug 1>&2)
+    $(error ERROR - Could not find both CC and AR!)
 endif
 
 $(info Using CC = $(CC), AR = $(AR))
