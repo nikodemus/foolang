@@ -3762,13 +3762,16 @@ class CArgument { backend stackmap }
 
 
     method visitMakeInstance: aMakeInstance
-        aMakeInstance args
-            do: { |each|
-                  let expr = CExpr emit: each
-                                   withBackend: backend
-                                   withStackmap: stackmap.
-                  backend output
-                      print: "    PUSH_DATUM(sp, {expr});\n" }!
+        let classC = CExpr emit: aMakeInstance args first
+                           withBackend: backend
+                           withStackmap: stackmap.
+        backend output
+            print: "    PUSH_DATUM(sp, &{classC});\n".
+        let datumC = CExpr emit: aMakeInstance args second
+                           withBackend: backend
+                           withStackmap: stackmap.
+        backend output
+            print: "    PUSH_DATUM(sp, {datumC});\n"!
 end
 
 
