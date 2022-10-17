@@ -3641,14 +3641,14 @@ class CBackend { output declared emitted dependencies }
             ifTrue: { return "foo_string_{n}" }.
         (Instance includes: thing)
             ifTrue: { thing type is IntegerClassDefinition
-                          => { return "{thing}" }.
+                          => { return thing hostValue toString }.
                       thing type is BooleanClassDefinition
                           => { return thing hostValue
                                    ifTrue: { "1" }
                                    ifFalse: { "0" } } }.
         (Datum includes: thing)
             ifTrue: { thing type is IntegerClassDefinition
-                          ifTrue: { return "{thing}" } }.
+                          ifTrue: { return thing hostValue toString } }.
         -- FIXME: Would be nice if the name identified which graph
         -- aka method_function_<id> the continuation belonged to.
         (Continuation includes: thing)
