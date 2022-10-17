@@ -3643,7 +3643,11 @@ class CBackend { output declared emitted dependencies }
             ifTrue: { return "foo_string_{n}" }.
         (Instance includes: thing)
             ifTrue: { thing type is IntegerClassDefinition
-                          ifTrue: { return "{thing}" } }.
+                          => { return "{thing}" }.
+                      thing type is BooleanClassDefinition
+                          => { return thing hostValue
+                                   ifTrue: { "1" }
+                                   ifFalse: { "0" } } }.
         (Datum includes: thing)
             ifTrue: { thing type is IntegerClassDefinition
                           ifTrue: { return "{thing}" } }.
@@ -3669,8 +3673,7 @@ class CBackend { output declared emitted dependencies }
         (MethodDictionary includes: thing)
             ifTrue: { return "struct FooMethodDictionary" }.
         (Instance includes: thing)
-            ifTrue: { thing type is IntegerClassDefinition
-                          ifTrue: { return "instance_t" } }.
+            ifTrue: { return (self declare: thing type) name }.
         (Datum includes: thing)
             ifTrue: { thing type is IntegerClassDefinition
                           ifTrue: { return "datum_t" } }.
@@ -3743,9 +3746,10 @@ class CArgument { backend stackmap }
 
     method visitConstant: aConst
         let classInfo = backend declare: aConst type :: ClassDefinition.
+        let valueInfo = backend declare: aConst value.
         backend output
             ; print: "    PUSH_DATUM(sp, &{classInfo name});\n"
-            ; print: "    PUSH_DATUM(sp, {aConst value});\n"!
+            ; print: "    PUSH_DATUM(sp, {valueInfo name});\n"!
 
 
     method visitContinuation: aCont
@@ -3776,10 +3780,7 @@ class CExpr { backend stackmap }
         expr visitBy: exprBuilder!
 
     method visitConstant: aConst
-        let value = aConst value.
-        (Integer includes: value)
-            ifTrue: { value toString }
-            ifFalse: { "&{(backend declare: aConst value) name}" }!
+         "{(backend declare: aConst value) name}"!
 
     method visitOperation: anOp -> String
         anOp kind visit: anOp by: self!
