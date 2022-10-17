@@ -1709,8 +1709,7 @@ class IS_EQ {}
                                                            ifFalse: { each  }}
                                              ifFalse: { each }}.
         simplified
-            ifTrue: { Log println: "SIMPLIFIED IS: {op args collect: #toString} --> {newArgs collect: #toString}".
-                      let newOp = graph ensureOperation: IS_EQ args: newArgs.
+            ifTrue: { let newOp = graph ensureOperation: IS_EQ args: newArgs.
                       return op replaceUsesWith: newOp in: worklist }!
 end
 
