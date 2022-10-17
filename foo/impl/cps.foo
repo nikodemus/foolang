@@ -1676,6 +1676,9 @@ class IS_EQ {}
     direct method name
         "isEq"!
 
+    direct method apply: args
+        Datum value: (args first hostValue is args second hostValue)!
+
     direct method type: _
         BooleanClassDefinition!
 
