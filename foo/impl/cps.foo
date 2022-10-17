@@ -4816,7 +4816,7 @@ struct FooClass foo_class_1 = \{
 \};
 "!
 
-    method test_c_backend_emit_main_42
+    method NO_test_c_backend_emit_main_42
         let ns = Namespace standard.
         let def = self convertClass: "class Main \{}
                                           method run: command in: system
