@@ -103,7 +103,12 @@ build/%.o : %.c
 .PHONY: build/%.run
 build/%.run: build/%$(EXE)
 	@echo Running: $<
-	@$<
+	@set -eu; \
+	if [ -f $*.output ]; then \
+		$< | diff --strip-trailing-cr -u - $*.output; \
+	else \
+		$<; \
+    fi
 
 .PHONY: test-benchmark
 test-benchmark: $(BENCHMARK_RUNS)
