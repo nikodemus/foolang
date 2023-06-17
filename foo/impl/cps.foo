@@ -307,12 +307,13 @@ class ConstructorImpl { classDefinition }
 
 
     method inlineIn: continuation in: graph with: worklist
+        -- FIXME: Should probably sanity check that there's only single arg and it's the correct one?
         continuation removeArgs.
         continuation addArgs: [graph ensureOperation: MAKE_INSTANCE
                                      args: [graph ensureConstant: classDefinition,
                                             graph ensureConstant: (Instance class: IntegerClassDefinition
                                                                             datum: 0)]].
-        continuation target: continuation target :: Application target!
+        continuation target: (continuation target)::Application target!
 
 
     method apply: args in: _classDefinition
@@ -2529,8 +2530,17 @@ class CpsConverter { graph var next classMap namespace }
                          params: [var]
                          target: body
                          args: [].
+        let tmp = graph makeVariable: "$tmp".
+        -- Boxed must not be interned, so no #ensureOperation: here!
+        let box = graph continuation: "$box"
+                        params: [tmp]
+                        target: bind
+                        args: [Operation
+                                   id: graph nextId
+                                   kind: MAKE_BOX
+                                   args: [tmp]].
         syntax value visitBy: self
-                     with: bind!
+                     with: box!
 
 
     method visitLiteral: syntax with: cc
