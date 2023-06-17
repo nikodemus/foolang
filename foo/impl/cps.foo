@@ -1418,8 +1418,11 @@ interface OperationKind
         (op args allSatisfy: #isConstant)
             ifTrue: { let argVals = op args collect: #value.
                       let value = op kind apply: argVals.
-                      let constant = graph ensureConstant: value.
-                      op replaceUsesWith: constant in: worklist }!
+                      -- apply will return False instead of a CpsValue if it fails,
+                      -- in which case we can't simplify.
+                      value is False
+                          ifFalse: { let constant = graph ensureConstant: value.
+                                     op replaceUsesWith: constant in: worklist } }!
 end
 
 
@@ -2471,7 +2474,7 @@ class CpsConverter { graph var next classMap namespace }
         let instance = Instance
                            class: classDef
                            datum: value.
-        let const = graph ensureConstant: instance.
+        let const = graph ensureConstant: instance::Instance.
         graph continuation: "$const_ref"
               params: []
               target: target
@@ -2740,6 +2743,7 @@ class CpsCopier { graph copied }
 
 
     method visitConstant: aConstant
+        -- Log println: "visitConstant: {aConstant}".
         copied
             at: aConstant
             ifNonePut: { graph ensureConstant: aConstant value }!
@@ -4931,6 +4935,28 @@ end"
                        with: [IntegerClassDefinition].
         assert that: { (CpsEvaluator eval: cps) hostValue }
                equals: 123!
+
+
+    method test_flush_unused_known_expression
+        let cps = self convertExpr: "1 + 2. 42"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    $return:3(42)
+"!
+
+
+    method test_keep_unused_unknown_expression
+        let cps = self convertExpr: "1 unknownMethod: 2. 42"
+                       with: [IntegerClassDefinition].
+        assert that: { CpsPrinter printToString: cps }
+               equals: "
+$entry:2($return:3):
+    apply:14($seq:8, findMethod:13(Integer, #unknownMethod:))(1, 2)
+$seq:8($ignore:7):
+    $return:3(42)
+"!
 
 
     method test_optimize_datumOf_makeInstance_pairs_eliminated
