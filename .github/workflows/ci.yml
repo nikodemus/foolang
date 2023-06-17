@@ -68,7 +68,7 @@ jobs:
         run: bash build.sh --bootstrap
 
       - name: Self Test
-        run: bash test_foo.sh
+        run: bash tests/test_foo.sh
 
       - name: Test Foolang
         run: cargo run foo/impl/test_foolang.foo --use=foo/lib
