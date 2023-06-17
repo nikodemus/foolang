@@ -72,15 +72,20 @@ Has:
 - ID: unique numeric identifier
 - KIND: one of:
   - ADDI, sum of the two integer arguments. Foldable.
-  - FIND_METHOD, finds the method function for the given selector in
-    the given class. Foldable. Value usually used by Application.
   - CLASS\_OF, class of the argument. Foldable. Value usually used by
     Primop with kind FIND\_METHOD.
+  - DATUM_OF, returns the datum of an instance argument. Foldable.
+  - FIND_METHOD, finds the method function for the given selector in
+    the given class. Foldable. Value usually used by Application.
   - INVALID, used to mark deleted primops.
+  - MAKE\_BOX, boxes a value for an assignable variable.
+  - MAKE\_INSTANCE, creates an instance value from a type and datum.
+  - SET_VALUE, changes the value of a boxed variable.
+  - VALUE\_OF, returns value of the a boxed variable.
 - ARGS: array of CPS Expressions consumed by this primop.
 - USES: set of CPS expressions which use the primop.
 
-!> Other truly primitive operation kinds like ADDI to be defined.
+!> More primitive operation kinds like ADDI to be defined. (ADDF, MULI, MULF...)
 
 ### Variable
 

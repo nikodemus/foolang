@@ -1532,6 +1532,14 @@ class INVALID {}
 end
 
 
+class MAKE_BOX {}
+    is OperationKind
+
+    direct method name
+        "makeBox"!
+end
+
+
 class MAKE_INSTANCE {}
     is OperationKind
 
@@ -1552,6 +1560,22 @@ class MAKE_INSTANCE {}
 
     direct method visit: operation by: visitor
         visitor visitMakeInstance: operation!
+end
+
+
+class SET_VALUE {}
+    is OperationKind
+
+    direct method name
+        "setValue"!
+end
+
+
+class VALUE_OF {}
+    is OperationKind
+
+    direct method name
+        "valueOf"!
 end
 
 
